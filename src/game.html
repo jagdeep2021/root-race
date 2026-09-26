@@ -1,0 +1,1441 @@
+<title>Root Race</title>
+<style>
+@font-face { font-family: 'Fredoka'; src: url(__FONT__) format('woff2'); font-weight: 300 700; font-display: block; }
+:root { color-scheme: light; --ink:#2d1e14; --ink2:#7a5f45; --paper:#fffaf0; --tile:#f4e9d5; --green:#2f9e44; --water:#1f86d6; --n:#23a043; --p:#8e44d0; --fun:#e07b12; }
+html, body { margin:0; height:100%; background:#241810; overflow:hidden; }
+body { font-family: Fredoka, ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif; color:var(--ink); user-select:none; -webkit-user-select:none; }
+canvas#game { position:fixed; inset:0; width:100vw; height:100vh; display:block; cursor:crosshair; }
+.overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; background:rgba(28,18,10,.40); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+.card { background:var(--paper); border-radius:28px; padding:24px 30px 26px; max-width:1080px; width:100%; box-sizing:border-box; max-height:calc(100vh - 32px); overflow:auto;
+  box-shadow:0 24px 70px rgba(0,0,0,.45), inset 0 -6px 0 #eadcc2; }
+.logo { margin:0; text-align:center; font-weight:700; font-size:clamp(46px,7vw,92px); line-height:.95; letter-spacing:.02em; color:#3a2718; }
+.logo span { color:var(--green); }
+.tag { text-align:center; font-size:clamp(16px,1.7vw,21px); margin:8px auto 18px; max-width:44em; line-height:1.35; text-wrap:balance; }
+.tag b { font-weight:600; } .w { color:var(--water); } .n { color:var(--n); } .p { color:var(--p); } .f { color:var(--fun); }
+.cols { display:grid; grid-template-columns:2.1fr 1fr; gap:24px; }
+@media (max-width:860px) { .cols { grid-template-columns:1fr; } }
+h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink2); font-weight:600; }
+.legend { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:7px; }
+.li { display:flex; align-items:center; gap:10px; background:var(--tile); border-radius:14px; padding:6px 10px; font-size:13.5px; line-height:1.2; }
+.li canvas { width:38px; height:38px; flex:none; }
+.li b { font-size:15px; font-weight:600; display:block; margin-bottom:1px; }
+.li.good b { color:#2f7d32; } .li.pow b { color:#b0630a; } .li.bad b { color:#c0392b; }
+.controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.key { background:#fff; border:2px solid #dccbac; border-bottom-width:5px; border-radius:12px; padding:4px 11px; font-weight:600; font-size:14.5px; }
+.start { margin:20px auto 0; display:block; font-family:inherit; font-weight:600; font-size:clamp(21px,2.6vw,30px); padding:13px 44px; border-radius:999px; border:none; cursor:pointer;
+  background:var(--green); color:#fff; box-shadow:0 7px 0 #1f6b2e; animation:pulse 1.3s ease-in-out infinite; }
+.start:active { transform:translateY(4px); box-shadow:0 3px 0 #1f6b2e; }
+@keyframes pulse { 50% { transform:scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .start { animation:none; } }
+.board ol { margin:0; padding-left:26px; font-size:17px; line-height:1.6; font-variant-numeric:tabular-nums; }
+.board li .sc { float:right; color:var(--green); font-weight:600; }
+.board li.me { color:var(--fun); font-weight:600; }
+.board .empty { color:var(--ink2); font-size:15px; }
+.science { display:flex; gap:12px; align-items:center; margin-top:14px; background:#e8f1fb; border-radius:16px; padding:10px; font-size:13.5px; line-height:1.3; }
+.science img { width:84px; height:84px; object-fit:cover; border-radius:50%; flex:none; }
+.big { font-size:clamp(28px,4.2vw,52px); text-align:center; margin:2px 0; line-height:1.1; font-weight:600; text-wrap:balance; }
+.big em { font-style:normal; color:var(--green); }
+.rank { text-align:center; font-size:clamp(18px,2.2vw,25px); color:var(--fun); margin-bottom:14px; font-weight:600; }
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.stat { background:var(--tile); border-radius:14px; padding:7px 12px; }
+.stat .v { font-size:24px; font-weight:600; font-variant-numeric:tabular-nums; } .stat .l { font-size:12.5px; color:var(--ink2); }
+.lesson { background:#f3e9fb; border-left:6px solid var(--p); border-radius:12px; padding:11px 15px; font-size:17px; margin:10px 0 0; line-height:1.35; }
+.fact { background:#fff1cc; border-left:6px solid #e0a100; border-radius:12px; padding:9px 15px; font-size:15px; margin:10px 0 0; line-height:1.35; }
+.nameRow { display:flex; gap:10px; align-items:center; margin:0 0 18px; flex-wrap:wrap; }
+.nameRow input { font-family:inherit; font-size:22px; font-weight:600; padding:7px 14px; border-radius:12px; border:3px solid #e0a100; background:#fff; color:var(--ink); width:200px; text-transform:uppercase; }
+.nameRow input:focus { outline:3px solid #ffd76a; }
+.btn { font-family:inherit; font-weight:600; font-size:19px; padding:9px 22px; border-radius:999px; border:none; cursor:pointer; background:#ffc93c; color:#3a2210; box-shadow:0 5px 0 #b88a12; }
+.btn.green { background:var(--green); color:#fff; box-shadow:0 5px 0 #1f6b2e; }
+.btn:focus-visible, .start:focus-visible { outline:3px solid #1f86d6; outline-offset:3px; }
+.hidden { display:none !important; }
+.card.title { max-width:800px; }
+.againAs { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.rootBtn { font-family:inherit; display:flex; align-items:center; gap:8px; text-align:left; background:var(--tile); border:2px solid transparent; border-radius:14px; padding:5px 8px; cursor:pointer; color:inherit; }
+.rootBtn:hover, .rootBtn:focus-visible { border-color:var(--hc); outline:none; }
+.rootBtn canvas { width:40px; height:40px; flex:none; }
+.rootBtn b { display:block; font-size:14px; font-weight:700; color:var(--hc); } .rootBtn span { font-size:11.5px; color:var(--ink2); line-height:1.15; display:block; }
+.board li .hn { font-size:12px; color:var(--ink2); font-weight:500; }
+.how { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:4px 0 0; }
+.step { background:var(--tile); border-radius:18px; padding:14px 10px 12px; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; }
+.step canvas { width:64px; height:64px; }
+.step b { font-size:18px; font-weight:600; } .step span { color:var(--ink2); font-size:14px; }
+.keys { display:flex; gap:6px; height:64px; align-items:center; }
+.keys i { font-style:normal; font-weight:700; font-size:21px; background:#fff; border:2px solid #dccbac; border-bottom-width:5px; border-radius:10px; width:34px; height:40px; display:grid; place-items:center; }
+.titleFoot { display:grid; grid-template-columns:1fr 1.3fr; gap:18px; margin-top:22px; align-items:start; }
+.titleFoot .science { margin-top:0; }
+@media (max-width:700px) { .how, .titleFoot { grid-template-columns:1fr; } }
+.small { font-size:13px; color:var(--ink2); text-align:center; margin-top:12px; }
+</style>
+
+<canvas id="game"></canvas>
+
+<div id="title" class="overlay">
+  <div class="card title">
+    <h1 class="logo">ROOT <span>RACE</span></h1>
+    <div class="tag">You are a corn root. Find food in the soil and grow the <b>tallest corn</b>!</div>
+    <div class="how">
+      <div class="step"><canvas data-icon="mouse"></canvas><b>Move the mouse</b><span>to steer your root</span></div>
+      <div class="step"><canvas data-icon="click"></canvas><b>Click</b><span>to grow a side root</span></div>
+      <div class="step"><div class="keys"><i>1</i><i>2</i><i>3</i><i>4</i></div><b>Keys 1 2 3 4</b><span>root superpowers</span></div>
+    </div>
+    <button class="start" id="startBtn">Click or press SPACE to play</button>
+    <div class="titleFoot">
+      <div class="board"><h3>Tallest corn today</h3><ol id="boardTitle"></ol></div>
+      <div class="science"><img id="imgAer" alt="Corn root cross-section with air channels"><div>A real corn root from our lab, glowing under the microscope. The dark holes are <b>air channels</b>, one of your superpowers!</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="card">
+    <div class="big">Your corn grew <em id="endScore">0</em> cm tall!</div>
+    <div class="rank" id="endRank"></div>
+    <div class="cols">
+      <div>
+        <div class="stats" id="endStats"></div>
+        <div class="lesson" id="endLesson"></div>
+        <div class="fact" id="endFact"></div>
+      </div>
+      <div class="board">
+        <div id="nameBox">
+          <h3>Put your name on the board</h3>
+          <div class="nameRow"><input id="nameIn" maxlength="10" placeholder="NAME" autocomplete="off"><button class="btn" id="saveBtn">Save</button></div>
+        </div>
+        <h3>Tallest corn today</h3>
+        <ol id="boardEnd"></ol>
+        <button class="btn green" id="againBtn" style="margin-top:14px">Next player</button>
+        <h3 style="margin-top:18px">Or try again as a different root</h3>
+        <div class="againAs" id="againAs"></div>
+      </div>
+    </div>
+    <div class="small">M: sound on/off · F: fullscreen</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// =====================================================================================
+// CONFIG: tweak freely
+// =====================================================================================
+const CFG = {
+  roundSeconds: 60,
+  tipSpeed: 55, seekSpeed: 42, autoSpeed: 26,        // px/s
+  diveFraction: 0.85,                                  // soil depth = a nonstop straight dive lasting this share of the round
+  seekLen: 150, autoLen: [30, 62], auto2Len: [14, 24], // lateral lengths (px)
+  autoGap: [26, 46], seekGap: [22, 36],                // spacing of automatic laterals
+  seekCost: 8, autoCost: 1, growCost: 0.045,
+  aerCost: 5, armorCost: 20, hairCost: 10, exuCost: 8, // root traits on keys 1-4
+  exuTime: 8, exuR: 75,                                // exudates: seconds active, max spread of each puff (px)
+  maintPerNode: 0.003, aerMaint: 0.3,                  // sugar/s to keep each 5 px of root alive; aerenchyma cuts it to 30%
+  incomeBase: 4.5, incomePerBio: 0.1,
+  fungusDrain: 0.2, fungusR: 140,
+  sugarStart: 80, sugarMax: 100, poolMax: 30,
+  density: [150, 95, 125],   // water, N, P particles per 1M px² of soil
+  respawn: [3.2, 2.0, 1.2], // per second per 1M px²
+  rainAt: 16, wormAt: 26, droughtAt: 38, wormLife: 20,
+  spores: 8, nematodes: 5, powerups: 4, rocksPerMpx: 11,
+  soilCm: 150, plantCmMax: 260,
+};
+const W_ = 0, N_ = 1, P_ = 2;
+// Root types (ideotypes) players pick before a round. mod values multiply the defaults in MOD0.
+const HEROES = {
+  diver:   { name: 'Deep Diver', tag: 'Zooms down deep. Built-in air channels make it cheap to grow.', col: '#2566b8', stats: [5, 2, 2, 3], mod: { speed: 1.25, gap: 1.6, autoAer: true } },
+  forager: { name: 'Topsoil Forager', tag: 'Loads of long side roots. The best at finding P.', col: '#2f8a3c', stats: [2, 5, 5, 2], mod: { speed: 0.85, gap: 0.6, latLen: 1.4, tipP: 1.35, hairTime: 1.7 } },
+  fungus:  { name: 'Fungus Friend', tag: 'Starts with a fungus partner. Its fungi reach farther.', col: '#e07b12', stats: [3, 3, 4, 3], mod: { fungR: 1.35, fungDrain: 0.6, startFungus: true } },
+  armored: { name: 'Iron Root', tag: 'Tough woody armor (MCS). Rootworm-proof, plows through hardpan.', col: '#8a3f14', stats: [3, 3, 2, 5], mod: { autoLig: true, pan: 0.9, uptake: 0.85, cost: 1.1 } },
+};
+const HERO_IDS = Object.keys(HEROES);
+const STANDARD = { name: 'Corn Root', col: '#2f9e44', mod: {} };
+const SHORT = { diver: 'Fast & deep', forager: 'Finds P best', fungus: 'Starts with fungus', armored: 'Worm-proof armor' };
+const MOD0 = { speed: 1, gap: 1, latLen: 1, tipP: 1, hairTime: 1, fungR: 1, fungDrain: 1, autoAer: false, autoLig: false, startFungus: false, pan: 0, uptake: 1, cost: 1 };
+const TCOL = ['#4fb4ff', '#5ee07a', '#c98bff'];
+// absorption radii [water, N, P]
+const RAD = { tip: [24, 24, 16], node: [10, 10, 5], col: [28, 18, 62] };
+const FONT = 'Fredoka, "Arial Rounded MT Bold", Arial, sans-serif';
+const QS = new URLSearchParams(location.search);
+
+// =====================================================================================
+// CANVAS
+// =====================================================================================
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  if (state === 'title' && G) G = newGame(true);
+}
+window.addEventListener('resize', () => resize());
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+function angDiff(a, b) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
+function lerpAngle(a, b, t) { return a + angDiff(a, b) * t; }
+// roots can't grow upward: keep heading in the lower half-plane (canvas y points down)
+function downAngle(a) { a = Math.atan2(Math.sin(a), Math.cos(a)); const m = 0.06; if (a < 0) return a > -Math.PI / 2 ? m : Math.PI - m; return clamp(a, m, Math.PI - m); }
+const font = (px, w = 600) => `${w} ${px}px ${FONT}`;
+
+// =====================================================================================
+// SOUND (generated with WebAudio)
+// =====================================================================================
+let AC = null, muted = false;
+function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); }
+function tone(f, dur = 0.1, type = 'sine', vol = 0.12, f2 = null, delay = 0) {
+  if (!AC || muted || (G && G.demo)) return;
+  const t0 = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+let lastBlip = 0;
+const SFX = {
+  pick(type, combo) { const now = performance.now(); if (now - lastBlip < 35) return; lastBlip = now;
+    const f = [330, 440, 587][type] * Math.pow(1.06, Math.min(combo, 12)); tone(f, 0.08, 'triangle', 0.08, f * 1.5); },
+  branch() { tone(220, 0.12, 'square', 0.05, 330); },
+  fungus() { [392, 494, 587, 784].forEach((f, i) => tone(f, 0.25, 'triangle', 0.1, null, i * 0.08)); },
+  power() { tone(300, 0.35, 'sawtooth', 0.06, 1200); tone(600, 0.35, 'triangle', 0.06, 1800, 0.05); },
+  armor() { tone(160, 0.35, 'square', 0.07, 90); [262, 330, 392].forEach((f, i) => tone(f, 0.2, 'triangle', 0.07, null, 0.05 + i * 0.07)); },
+  chomp() { tone(120, 0.06, 'square', 0.05, 70); },
+  bite() { tone(140, 0.25, 'sawtooth', 0.12, 60); },
+  bump() { tone(90, 0.06, 'square', 0.04); },
+  event() { tone(523, 0.18, 'square', 0.07); tone(392, 0.3, 'square', 0.07, null, 0.18); },
+  tick(hi) { tone(hi ? 1046 : 784, 0.08, 'square', 0.06); },
+  end() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.12, null, i * 0.12)); },
+};
+
+// =====================================================================================
+// SPRITES
+// =====================================================================================
+function mk(size, fn) { const c = document.createElement('canvas'); c.width = c.height = size; fn(c.getContext('2d'), size); return c; }
+function glow(x, col, blur) { x.shadowColor = col; x.shadowBlur = blur; }
+function sprDrop(x, s) {
+  const c = s / 2; glow(x, 'rgba(120,200,255,.9)', s * 0.18);
+  const g = x.createLinearGradient(0, s * 0.2, 0, s * 0.8); g.addColorStop(0, '#9fdcff'); g.addColorStop(1, '#1f7fd0');
+  x.fillStyle = g; x.beginPath(); x.moveTo(c, s * 0.2);
+  x.bezierCurveTo(c + s * 0.25, s * 0.47, c + s * 0.23, s * 0.78, c, s * 0.78); x.bezierCurveTo(c - s * 0.23, s * 0.78, c - s * 0.25, s * 0.47, c, s * 0.2); x.fill();
+  x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.85)'; x.beginPath(); x.ellipse(c - s * 0.07, s * 0.6, s * 0.035, s * 0.08, 0.35, 0, 7); x.fill();
+}
+function sprOrb(x, s, light, mid, dark, letter) {
+  const c = s / 2; glow(x, light, s * 0.18);
+  const g = x.createRadialGradient(c - s * .08, c - s * .1, s * .02, c, c, s * .3); g.addColorStop(0, light); g.addColorStop(0.45, mid); g.addColorStop(1, dark);
+  x.fillStyle = g; x.beginPath(); x.arc(c, c, s * 0.28, 0, 7); x.fill(); x.shadowBlur = 0;
+  x.fillStyle = '#fff'; x.font = font(s * 0.34, 700); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(letter, c, c + s * 0.02);
+}
+function sprSpore(x, s) {
+  const c = s / 2; x.lineCap = 'round';
+  x.strokeStyle = 'rgba(255,226,180,.85)'; x.lineWidth = s * 0.018;
+  for (let i = 0; i < 11; i++) { const a = i / 11 * 6.283; x.beginPath(); x.moveTo(c + Math.cos(a) * s * .2, c + Math.sin(a) * s * .2);
+    x.quadraticCurveTo(c + Math.cos(a + .35) * s * .34, c + Math.sin(a + .35) * s * .34, c + Math.cos(a) * s * .47, c + Math.sin(a) * s * .47); x.stroke(); }
+  glow(x, 'rgba(255,170,70,.9)', s * 0.12);
+  const g = x.createRadialGradient(c - s * .06, c - s * .07, 1, c, c, s * .24); g.addColorStop(0, '#fff6dc'); g.addColorStop(0.5, '#ffb35c'); g.addColorStop(1, '#c9661a');
+  x.fillStyle = g; x.beginPath(); x.arc(c, c, s * 0.22, 0, 7); x.fill(); x.shadowBlur = 0;
+  x.fillStyle = '#5a2d0a'; x.beginPath(); x.arc(c - s * .065, c - s * .02, s * .026, 0, 7); x.arc(c + s * .065, c - s * .02, s * .026, 0, 7); x.fill();
+  x.strokeStyle = '#5a2d0a'; x.lineWidth = s * .022; x.beginPath(); x.arc(c, c + s * .025, s * .06, 0.25, Math.PI - 0.25); x.stroke();
+}
+function badge(x, s, col, dark) {
+  const c = s / 2; glow(x, 'rgba(255,240,180,.8)', s * .12);
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(c, c, s * .44, 0, 7); x.fill(); x.shadowBlur = 0;
+  const g = x.createLinearGradient(0, c - s * .38, 0, c + s * .38); g.addColorStop(0, col); g.addColorStop(1, dark);
+  x.fillStyle = g; x.beginPath(); x.arc(c, c, s * .37, 0, 7); x.fill();
+}
+function sprHair(x, s) { badge(x, s, '#5cc46a', '#2f8a3c'); const c = s / 2; x.strokeStyle = '#fff6df'; x.lineCap = 'round';
+  x.lineWidth = s * .08; x.beginPath(); x.moveTo(c, s * .24); x.lineTo(c, s * .78); x.stroke(); x.lineWidth = s * .028;
+  for (let i = 0; i < 7; i++) { const y = s * .32 + i * s * .065; x.beginPath(); x.moveTo(c, y); x.lineTo(c + s * .17, y - s * .06); x.moveTo(c, y); x.lineTo(c - s * .17, y - s * .03); x.stroke(); } }
+function sprAir(x, s) { badge(x, s, '#5aa9f0', '#2566b8'); const c = s / 2; x.fillStyle = '#fff6df'; x.beginPath(); x.arc(c, c, s * .22, 0, 7); x.fill();
+  x.fillStyle = '#2f73c4'; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; x.beginPath(); x.ellipse(c + Math.cos(a) * s * .14, c + Math.sin(a) * s * .14, s * .045, s * .03, a, 0, 7); x.fill(); }
+  x.fillStyle = '#fff6df'; x.beginPath(); x.arc(c, c, s * .06, 0, 7); x.fill(); }
+function sprAuxin(x, s) { badge(x, s, '#ffc24a', '#d98a00'); const c = s / 2; x.fillStyle = '#fff';
+  x.beginPath(); x.moveTo(c + s * .05, s * .2); x.lineTo(c - s * .13, c + s * .03); x.lineTo(c, c + s * .03); x.lineTo(c - s * .05, s * .8); x.lineTo(c + s * .13, c - s * .04); x.lineTo(c, c - s * .04); x.closePath(); x.fill(); }
+function sprArmor(x, s) { const c = s / 2; glow(x, 'rgba(0,0,0,.25)', s * .06);
+  const g = x.createLinearGradient(0, s * .12, 0, s * .88); g.addColorStop(0, '#d98a4a'); g.addColorStop(1, '#8a4217');
+  x.fillStyle = g; x.beginPath(); x.moveTo(c, s * .1); x.lineTo(s * .84, s * .24); x.quadraticCurveTo(s * .84, s * .72, c, s * .9); x.quadraticCurveTo(s * .16, s * .72, s * .16, s * .24); x.closePath(); x.fill(); x.shadowBlur = 0;
+  x.strokeStyle = 'rgba(255,225,180,.65)'; x.lineWidth = s * .03; for (let r = .1; r < .32; r += .07) { x.beginPath(); x.arc(c, s * .5, s * r, 0, 7); x.stroke(); } }
+function sprNema(x, s) { x.lineCap = 'round'; const path = () => { x.beginPath(); for (let i = 0; i <= 20; i++) { const t = i / 20; x.lineTo(s * .12 + t * s * .74, s * .5 + Math.sin(t * 9) * s * .1); } };
+  path(); x.strokeStyle = '#7d6e62'; x.lineWidth = s * .14; x.stroke(); path(); x.strokeStyle = '#f3e9dc'; x.lineWidth = s * .09; x.stroke();
+  x.fillStyle = '#e03030'; x.beginPath(); x.arc(s * .83, s * .46, s * .035, 0, 7); x.fill(); }
+function sprTunnel(x, s) { x.fillStyle = '#3a2413'; x.beginPath(); x.roundRect(s * .34, 0, s * .32, s, s * .16); x.fill();
+  x.strokeStyle = '#ef95a4'; x.lineWidth = s * .14; x.lineCap = 'round'; x.beginPath(); x.moveTo(s * .5, s * .18); x.quadraticCurveTo(s * .6, s * .5, s * .5, s * .82); x.stroke(); }
+function sprRock(x, s) { glow(x, 'rgba(0,0,0,.3)', s * .08); const g = x.createRadialGradient(s * .4, s * .38, 2, s * .5, s * .5, s * .4); g.addColorStop(0, '#c9c6c0'); g.addColorStop(1, '#7c7872');
+  x.fillStyle = g; x.beginPath(); x.ellipse(s * .5, s * .54, s * .36, s * .27, -0.2, 0, 7); x.fill(); }
+function sprRootworm(x, s) { x.lineCap = 'round';
+  for (let i = 9; i >= 0; i--) { const a = -0.3 + i / 9 * 3.6; const px = s * .5 + Math.cos(a) * s * .22, py = s * .5 + Math.sin(a) * s * .22; x.fillStyle = i % 2 ? '#f6efdf' : '#eadfc8'; x.beginPath(); x.arc(px, py, s * (.1 - i * .004), 0, 7); x.fill(); }
+  x.fillStyle = '#6b3a16'; x.beginPath(); x.arc(s * .5 + Math.cos(-0.3) * s * .22, s * .5 + Math.sin(-0.3) * s * .22, s * .085, 0, 7); x.fill(); }
+function sprSugar(x, s) { glow(x, 'rgba(255,200,60,.8)', s * .12); const g = x.createLinearGradient(0, s * .2, 0, s * .8); g.addColorStop(0, '#ffe38a'); g.addColorStop(1, '#e8a400');
+  x.fillStyle = g; x.beginPath(); x.roundRect(s * .22, s * .22, s * .56, s * .56, s * .12); x.fill(); x.shadowBlur = 0;
+  x.fillStyle = 'rgba(255,255,255,.8)'; x.beginPath(); x.moveTo(s * .38, s * .3); x.lineTo(s * .42, s * .4); x.lineTo(s * .52, s * .44); x.lineTo(s * .42, s * .48); x.lineTo(s * .38, s * .58); x.lineTo(s * .34, s * .48); x.lineTo(s * .24, s * .44); x.lineTo(s * .34, s * .4); x.closePath(); x.fill(); }
+function sprMouse(x, s, click) {
+  const c = s / 2; x.lineWidth = s * 0.045; x.strokeStyle = '#5a4634'; x.fillStyle = '#fff';
+  x.beginPath(); x.roundRect(c - s * .2, s * .22, s * .4, s * .6, s * .2); x.fill(); x.stroke();
+  if (click) { x.fillStyle = '#2f9e44'; x.beginPath(); x.moveTo(c, s * .22); x.lineTo(c, s * .45); x.lineTo(c - s * .2, s * .45); x.lineTo(c - s * .2, s * .42); x.arcTo(c - s * .2, s * .22, c, s * .22, s * .2); x.fill(); x.stroke();
+    x.strokeStyle = '#2f9e44'; x.lineCap = 'round'; for (const [a, b, d, e] of [[.16, .2, .06, .1], [.12, .32, .02, .3], [.2, .1, .14, .02]]) { x.beginPath(); x.moveTo(s * a, s * b); x.lineTo(s * d, s * e); x.stroke(); } }
+  x.strokeStyle = '#5a4634'; x.beginPath(); x.moveTo(c, s * .22); x.lineTo(c, s * .45); x.moveTo(c - s * .2, s * .45); x.lineTo(c + s * .2, s * .45); x.stroke();
+  if (!click) { x.fillStyle = '#b79a78'; for (const d of [-1, 1]) { x.beginPath(); x.moveTo(c + d * s * .42, s * .52); x.lineTo(c + d * s * .3, s * .45); x.lineTo(c + d * s * .3, s * .59); x.fill(); } }
+}
+function sprExu(x, s) { badge(x, s, '#3fc9c1', '#0f7a74'); const c = s / 2; x.fillStyle = 'rgba(255,255,255,.9)';
+  for (const [dx, dy, r] of [[-.12, .06, .1], [.02, -.04, .13], [.14, .08, .09], [0, .14, .07]]) { x.beginPath(); x.arc(c + dx * s, c + dy * s, r * s, 0, 7); x.fill(); }
+  x.fillStyle = '#0f7a74'; for (const [dx, dy] of [[-.12, .05], [.03, -.05], [.14, .07]]) { x.beginPath(); x.arc(c + dx * s, c + dy * s, .025 * s, 0, 7); x.fill(); } }
+let SPR = {}, TSPR = [];
+function buildSprites() {
+  SPR = {
+    water: mk(64, sprDrop),
+    n: mk(64, (x, s) => sprOrb(x, s, '#c6ffd2', '#44cc62', '#16803a', 'N')),
+    p: mk(64, (x, s) => sprOrb(x, s, '#f0dcff', '#b172ee', '#6a28a8', 'P')),
+    spore: mk(96, sprSpore), hair: mk(64, sprHair), air: mk(64, sprAir), auxin: mk(64, sprAuxin), armor: mk(64, sprArmor),
+    nema: mk(64, sprNema), worm: mk(64, sprTunnel), rock: mk(64, sprRock), rootworm: mk(64, sprRootworm), sugar: mk(64, sprSugar), exu: mk(64, sprExu), mouse: mk(96, (x, s) => sprMouse(x, s, false)), click: mk(96, (x, s) => sprMouse(x, s, true)),
+  };
+  TSPR = [SPR.water, SPR.n, SPR.p];
+  document.querySelectorAll('canvas[data-icon]').forEach(c => { c.width = c.height = 128; const x = c.getContext('2d'); x.clearRect(0, 0, 128, 128); x.drawImage(SPR[c.dataset.icon], 0, 0, 128, 128); });
+}
+
+// =====================================================================================
+// GAME STATE
+// =====================================================================================
+let G = null;
+let state = 'title';
+
+function newGame(demo, heroId = 'standard') {
+  const sky = clamp(Math.round(H * 0.24), 140, 230);
+  const worldW = Math.max(520, W - panelWidth()), D = Math.round(Math.max(H - sky - 12, CFG.tipSpeed * CFG.roundSeconds * CFG.diveFraction));
+  const g = {
+    demo, t: 0, dur: CFG.roundSeconds, worldW, D, sky, area: worldW * D / 1e6,
+    pxPerCm: D / CFG.soilCm, plantPx: (sky - 34) / CFG.plantCmMax,
+    hardY: D * 0.36, hardH: clamp(D * 0.03, 18, 28),
+    roots: [], parts: [], spores: [], fungi: [], threads: [], powers: [], nems: [], rocks: [], burrows: [], worm: null,
+    pool: [0, 0, 0], got: [0, 0, 0], limitT: [0, 0, 0], limiting: -1,
+    sugar: CFG.sugarStart, biomass: 0, rootLen: 0, laterals: 0, bites: 0, chewed: 0, armorUses: 0, aerUses: 0, hairUses: 0, maxDepth: 0,
+    liveNodes: 0, aerNodes: 0, income: 0, spend: 0, costAcc: 0, upkeep: 0, traitCD: { aer: 0, lig: 0, hair: 0, exu: 0 }, btns: [],
+    buff: { hair: 0, auxin: 0, exu: 0 }, stun: 0, combo: 0, comboT: 0, bestCombo: 0,
+    fx: [], texts: [], toasts: [], seen: {}, shake: 0,
+    rain: 0, drought: false, droughtT: 0, raining: false, rainDone: false, wormDone: false, lastTick: 99,
+    branchCD: 0, branchSide: 1, respawnAcc: [0, 0, 0], powerAcc: 0,
+    wilted: false, plantX: worldW / 2, aiT: 0, aiTarget: null, camY: -sky, reveal: 0, callouts: [], calloutT: 0, puffs: [], puffT: 0,
+  };
+  g.heroId = heroId; g.hero = HEROES[heroId] || STANDARD; g.mod = { ...MOD0, ...g.hero.mod };
+  g.cell = 32; g.gw = Math.ceil(worldW / g.cell) + 1; g.gh = Math.ceil(D / g.cell) + 1;
+  g.grid = Array.from({ length: g.gw * g.gh }, () => []);
+  const sc = clamp(D / 700, 0.8, 1.3);
+
+  // earthworm burrows (vertical biopores)
+  const nb = Math.max(2, Math.round(worldW / 480));
+  for (let i = 0; i < nb; i++) {
+    let x0 = (i + 0.5) / nb * worldW + rand(-60, 60); if (Math.abs(x0 - g.plantX) < 60) x0 += 90;
+    const y0 = rand(8, D * 0.1), y1 = y0 + D * rand(0.4, 0.65), ph = rand(0, 6), amp = rand(12, 26), pts = [];
+    for (let y = y0; y <= y1; y += 8) pts.push([x0 + Math.sin((y - y0) / 110 + ph) * amp, y]);
+    g.burrows.push({ pts, worm: rand(0, 1), wdir: 1 });
+  }
+  // rocks
+  const nr = Math.round(CFG.rocksPerMpx * g.area);
+  for (let i = 0; i < nr * 3 && g.rocks.length < nr; i++) {
+    const r = rand(12, 30) * sc, x = rand(r, worldW - r), y = rand(D * 0.1, D - 30);
+    if (Math.abs(x - g.plantX) < 80 && y < D * 0.3) continue;
+    if (g.burrows.some(b => b.pts.some(p => Math.hypot(p[0] - x, p[1] - y) < r + 12))) continue;
+    if (g.rocks.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 6)) continue;
+    const pts = []; for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const rr = r * rand(0.85, 1.1); pts.push([Math.cos(a) * rr, Math.sin(a) * rr * 0.85]); }
+    g.rocks.push({ x, y, r, pts, hue: rand(20, 40), l: rand(0.9, 1.1) });
+  }
+  // nutrients
+  g.pPatches = []; for (let i = 0; i < Math.max(5, Math.round(worldW / 150)); i++) g.pPatches.push([rand(30, worldW - 30), rand(15, D * 0.42)]);
+  g.target = CFG.density.map(v => Math.round(v * g.area));
+  for (let t = 0; t < 3; t++) for (let i = 0; i < g.target[t]; i++) spawnPart(g, t);
+  // fungi, power-ups, nematodes
+  for (let i = 0; i < CFG.spores; i++) g.spores.push({ x: rand(30, worldW - 30), y: i < 3 ? rand(40, D * 0.35) : rand(40, D * 0.6), ph: rand(0, 6) });
+  g.spores[0].x = clamp(g.plantX + (Math.random() < 0.5 ? -1 : 1) * rand(50, 110), 30, worldW - 30); g.spores[0].y = rand(45, 90);
+  for (let i = 0; i < CFG.powerups; i++) spawnPower(g);
+  for (let i = 0; i < CFG.nematodes; i++) g.nems.push({ x: rand(30, worldW - 30), y: rand(D * 0.3, D - 30), a: rand(0, 6), ph: rand(0, 6), cd: 0, flee: 0 });
+
+  g.main = newRoot(g, g.plantX, 3, Math.PI / 2, true);
+  if (g.mod.autoAer) g.aerUses = 1;
+  if (g.mod.autoLig) g.armorUses = 1;
+  if (g.mod.startFungus) g.fungi.push({ x: g.plantX, y: 30, R: 16, maxR: CFG.fungusR * g.mod.fungR, born: 0 });
+  g.soilTex = renderSoil(g);
+  return g;
+}
+function inRock(g, x, y, pad = 0) { for (const r of g.rocks) { const dx = x - r.x, dy = (y - r.y) / 0.85, rr = r.r * 0.95 + pad; if (dx * dx + dy * dy < rr * rr) return r; } return null; }
+function spawnPart(g, t, opts = {}) {
+  let x, y, tries = 0;
+  do {
+    x = rand(8, g.worldW - 8);
+    if (t === W_) { const minY = g.drought ? g.D * 0.45 : 12; y = opts.top ? rand(10, g.D * 0.22) : lerp(minY, g.D - 10, Math.pow(Math.random(), 0.6)); }
+    else if (t === N_) y = opts.top ? rand(10, g.D * 0.2) : rand(g.D * 0.06, g.D * 0.75);
+    else { const p = g.pPatches[(Math.random() * g.pPatches.length) | 0]; x = p[0] + gauss() * 50; y = p[1] + gauss() * 38; }
+    tries++;
+  } while (tries < 20 && (inRock(g, x, y, 4) || y < 8 || y > g.D - 8 || x < 6 || x > g.worldW - 6));
+  g.parts.push({ x, y, t, fly: null, ph: rand(0, 6), a: 1 });
+}
+function spawnPower(g) {
+  const types = ['auxin']; let x, y, tries = 0;
+  do { x = rand(30, g.worldW - 30); y = rand(g.D * 0.15, g.D - 30); tries++; } while (tries < 20 && inRock(g, x, y, 16));
+  g.powers.push({ x, y, type: types[(Math.random() * types.length) | 0], ph: rand(0, 6) });
+}
+function newRoot(g, x, y, a, main, kind = main ? 'main' : 'seek', maxLen = CFG.seekLen, order = 1) {
+  const r = { main, kind, order, tip: { x, y, a: main ? a : downAngle(a) }, pts: [], alive: true, len: 0, maxLen: main ? Infinity : maxLen,
+    acc: 0, target: null, born: g.t, latAcc: 0, latGap: rand(...(main ? CFG.autoGap : CFG.seekGap)), side: 1 };
+  g.roots.push(r); addNode(g, r, x, y); return r;
+}
+function addNode(g, r, x, y) {
+  const n = { x, y, col: false, lig: 0, aer: 0, dead: false, b: g.t };
+  r.pts.push(n); g.liveNodes++;
+  if (g.mod.autoAer) { n.aer = g.t + 1.5; g.aerNodes++; }
+  if (g.mod.autoLig) n.lig = g.t + 1.5;
+  const cx = (x / g.cell) | 0, cy = (y / g.cell) | 0;
+  if (cx >= 0 && cy >= 0 && cx < g.gw && cy < g.gh) g.grid[cy * g.gw + cx].push(n);
+  for (const f of g.fungi) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.R * f.R) { colonize(g, n); break; }
+}
+function colonize(g, n) {
+  if (n.col) return; n.col = true;
+  if (g.threads.length > 2500 || Math.random() < 0.4) return;
+  for (let k = 0; k < 2; k++) {
+    const pts = [n.x, n.y]; let a = rand(0, 6.283), x = n.x, y = n.y;
+    for (let s = 0, st = 4 + (Math.random() * 4 | 0); s < st; s++) { a += rand(-0.7, 0.7); const l = rand(6, 12); x += Math.cos(a) * l; y += Math.sin(a) * l; pts.push(x, y); }
+    g.threads.push({ pts, born: g.t + rand(0, 0.6) });
+  }
+}
+
+// =====================================================================================
+// SOIL ART (pre-rendered once per game)
+// =====================================================================================
+function renderSoil(g) {
+  const s = Math.min(DPR, 1.25), Wd = g.worldW, D = g.D;
+  const c = document.createElement('canvas'); c.width = Math.ceil(Wd * s); c.height = Math.ceil(D * s);
+  const x = c.getContext('2d'); x.scale(s, s);
+  const b1 = xx => D * 0.2 + Math.sin(xx / 95) * 6 + Math.sin(xx / 41 + 1.3) * 3;
+  const b2 = xx => D * 0.58 + Math.sin(xx / 120 + 2) * 8 + Math.sin(xx / 53) * 4;
+  const above = (fn, c0, c1, y1) => { const gr = x.createLinearGradient(0, 0, 0, y1); gr.addColorStop(0, c0); gr.addColorStop(1, c1); x.fillStyle = gr;
+    x.beginPath(); x.moveTo(0, 0); x.lineTo(Wd, 0); for (let xx = Wd; xx >= 0; xx -= 8) x.lineTo(xx, fn(xx)); x.closePath(); x.fill(); };
+  let gr = x.createLinearGradient(0, D * 0.55, 0, D); gr.addColorStop(0, '#9a633b'); gr.addColorStop(1, '#a8703f'); x.fillStyle = gr; x.fillRect(0, 0, Wd, D);
+  above(b2, '#6b472c', '#83593a', D * 0.6);
+  above(b1, '#34241a', '#4a3223', D * 0.22);
+  // soft horizon boundaries
+  for (const fn of [b1, b2]) { x.beginPath(); for (let xx = 0; xx <= Wd; xx += 8) x.lineTo(xx, fn(xx)); x.strokeStyle = 'rgba(0,0,0,.12)'; x.lineWidth = 7; x.stroke(); x.strokeStyle = 'rgba(255,225,185,.07)'; x.lineWidth = 2; x.stroke(); }
+  // clay mottles
+  for (let i = 0; i < Wd * D / 9000; i++) {
+    const px = Math.random() * Wd, py = rand(D * 0.55, D), r = rand(10, 34);
+    const m = x.createRadialGradient(px, py, 0, px, py, r); const col = Math.random() < 0.7 ? '214,138,70' : '140,132,120';
+    m.addColorStop(0, `rgba(${col},.22)`); m.addColorStop(1, `rgba(${col},0)`); x.fillStyle = m; x.fillRect(px - r, py - r, r * 2, r * 2);
+  }
+  // crumbs & aggregates, coloured per horizon
+  for (let i = 0; i < Wd * D / 55; i++) {
+    const px = Math.random() * Wd, py = Math.random() * D; const h = py < b1(px) ? 0 : py < b2(px) ? 1 : 2;
+    const L = [rand(12, 30), rand(24, 44), rand(34, 54)][h], S = [30, 38, 46][h];
+    x.fillStyle = `hsla(${rand(20, 32)},${S}%,${L}%,${rand(0.35, 0.8)})`;
+    const r = [rand(0.6, 2), rand(0.8, 2.6), rand(0.6, 2)][h]; x.beginPath(); x.ellipse(px, py, r, r * rand(0.6, 1), rand(0, 3), 0, 7); x.fill();
+  }
+  // organic flecks & grass roots in topsoil
+  x.lineCap = 'round';
+  for (let i = 0; i < Wd / 3; i++) { const px = Math.random() * Wd, py = Math.random() * D * 0.19; x.strokeStyle = `rgba(20,12,6,${rand(.3, .6)})`; x.lineWidth = rand(0.8, 1.6);
+    x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + rand(-5, 5), py + rand(-4, 4), px + rand(-9, 9), py + rand(-5, 5)); x.stroke(); }
+  x.strokeStyle = 'rgba(235,215,175,.28)'; x.lineWidth = 0.8;
+  for (let px = 4; px < Wd; px += rand(5, 12)) { if (Math.abs(px - g.plantX) < 30) continue; let yy = 0, xx = px; x.beginPath(); x.moveTo(xx, 0);
+    const len = rand(8, D * 0.07); while (yy < len) { yy += 4; xx += rand(-1.5, 1.5); x.lineTo(xx, yy); } x.stroke(); }
+  // pebbles
+  for (let i = 0; i < Wd * D / 11000; i++) {
+    const px = Math.random() * Wd, py = rand(D * 0.18, D), r = rand(1.8, 4.5);
+    const pg = x.createRadialGradient(px - r * .3, py - r * .3, 0.3, px, py, r); pg.addColorStop(0, '#d9cfc0'); pg.addColorStop(1, '#8a7a68');
+    x.fillStyle = pg; x.beginPath(); x.ellipse(px, py, r, r * 0.8, rand(0, 3), 0, 7); x.fill();
+  }
+  // hardpan: dense platy layer
+  const hy = g.hardY, hh = g.hardH;
+  x.fillStyle = 'rgba(88,78,72,.42)'; x.fillRect(0, hy, Wd, hh);
+  x.strokeStyle = 'rgba(38,30,26,.4)'; x.lineWidth = 1.2;
+  for (let yy = hy + 3; yy < hy + hh; yy += 3.5) { x.beginPath(); for (let xx = 0; xx <= Wd; xx += 14) x.lineTo(xx, yy + Math.sin(xx / 23 + yy * 3) * 0.9); x.stroke(); }
+  x.fillStyle = 'rgba(255,240,220,.55)'; x.font = font(11, 600); x.textBaseline = 'middle';
+  for (let xx = 60; xx < Wd; xx += 380) x.fillText('H A R D P A N  ·  packed soil', xx, hy + hh / 2 + 1);
+  // horizon labels
+  x.fillStyle = 'rgba(255,236,210,.38)'; x.font = font(12, 600); x.textBaseline = 'alphabetic';
+  x.fillText('T O P S O I L', 34, 22); x.fillText('S U B S O I L', 34, b1(34) + 22); x.fillText('C L A Y', 34, b2(34) + 22);
+  // burrows (with lighter lining)
+  for (const b of g.burrows) {
+    x.lineJoin = 'round'; const path = () => { x.beginPath(); b.pts.forEach(p => x.lineTo(p[0], p[1])); };
+    path(); x.strokeStyle = 'rgba(150,98,60,.35)'; x.lineWidth = 18; x.stroke();
+    path(); x.strokeStyle = '#2a1a0f'; x.lineWidth = 12; x.stroke();
+    path(); x.strokeStyle = '#1b1109'; x.lineWidth = 7; x.stroke();
+  }
+  // rocks
+  for (const r of g.rocks) {
+    x.save(); x.translate(r.x, r.y);
+    x.shadowColor = 'rgba(0,0,0,.4)'; x.shadowBlur = 8; x.shadowOffsetY = 3;
+    const rg = x.createRadialGradient(-r.r * .35, -r.r * .35, 1, 0, 0, r.r * 1.1);
+    rg.addColorStop(0, `hsl(${r.hue},8%,${74 * r.l}%)`); rg.addColorStop(1, `hsl(${r.hue},9%,${40 * r.l}%)`);
+    x.fillStyle = rg; x.beginPath(); const n = r.pts.length;
+    for (let k = 0; k <= n; k++) { const p = r.pts[k % n], q = r.pts[(k + 1) % n]; const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; if (k === 0) x.moveTo(mx, my); else x.quadraticCurveTo(p[0], p[1], mx, my); }
+    x.closePath(); x.fill(); x.shadowColor = 'transparent';
+    x.strokeStyle = 'rgba(255,255,255,.22)'; x.lineWidth = 2; x.beginPath(); x.arc(-r.r * .15, -r.r * .1, r.r * .55, 3.5, 4.6); x.stroke();
+    x.restore();
+  }
+  // lighting: lighter near the surface, darker deep, soft side vignette
+  gr = x.createLinearGradient(0, 0, 0, D); gr.addColorStop(0, 'rgba(255,220,170,.06)'); gr.addColorStop(1, 'rgba(0,0,0,.2)'); x.fillStyle = gr; x.fillRect(0, 0, Wd, D);
+  gr = x.createLinearGradient(0, 0, Wd, 0); gr.addColorStop(0, 'rgba(0,0,0,.22)'); gr.addColorStop(0.12, 'rgba(0,0,0,0)'); gr.addColorStop(0.88, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.22)');
+  x.fillStyle = gr; x.fillRect(0, 0, Wd, D);
+  return c;
+}
+
+// =====================================================================================
+// INPUT
+// =====================================================================================
+const keys = {}; const mouse = { x: 0, y: 0, active: false }; let lastKeyT = -1e9, inputLock = 0;
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+window.addEventListener('keydown', e => {
+  audio();
+  const k = e.key.toLowerCase();
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') { if (k === 'enter') saveName(); return; }
+  keys[k] = true;
+  if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'w', 'a', 's', 'd'].includes(k)) lastKeyT = performance.now();
+  if (k === 'm') muted = !muted;
+  if (k === 'f') toggleFS();
+  if (k === 'x' && e.ctrlKey && e.shiftKey) { saveBoard([]); drawBoards(); }
+  if (state === 'play' && TRAITS.some(t => t.key === k)) trait(TRAITS.find(t => t.key === k).id);
+  if (k === ' ' || k === 'enter') {
+    e.preventDefault();
+    if (state === 'title') startPlay();
+    else if (state === 'play' && k === ' ') branch();
+    else if (state === 'end' && endReady()) toTitle();
+  }
+  if (k.startsWith('arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+cv.addEventListener('mousedown', e => { audio(); if (state !== 'play' || e.button !== 0) return;
+  const b = G.btns.find(b => e.clientX >= b.x && e.clientX <= b.x + b.w && e.clientY >= b.y && e.clientY <= b.y + b.h);
+  if (b) trait(b.id); else if (e.clientX < W - panelWidth()) branch(); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+document.getElementById('title').addEventListener('mousedown', () => { audio(); if (state === 'title') startPlay(); });
+document.getElementById('againBtn').addEventListener('click', () => { if (endReady()) toTitle(); });
+document.getElementById('saveBtn').addEventListener('click', saveName);
+function toggleFS() { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); } catch (e) {} }
+
+// =====================================================================================
+// FLOW
+// =====================================================================================
+let endAt = 0, savedIdx = -1;
+function endReady() { return performance.now() - endAt > 3500; }
+function startPlay() { beginPlay('standard'); }
+function buildRootButtons() { // "try again as" row on the end screen
+  const box = document.getElementById('againAs'); box.innerHTML = '';
+  HERO_IDS.forEach(id => {
+    const h = HEROES[id], b = document.createElement('button'); b.className = 'rootBtn'; b.style.setProperty('--hc', h.col);
+    b.innerHTML = `<canvas></canvas><div><b>${h.name}</b><span>${SHORT[id]}</span></div>`;
+    const fake = { liveNodes: 10, aerNodes: h.mod.autoAer ? 9 : 0, aerUses: h.mod.autoAer ? 1 : 0, armorUses: h.mod.autoLig ? 1 : 0, chewed: 0,
+      buff: { hair: id === 'forager' ? 1 : 0, exu: 0 }, fungi: h.mod.startFungus ? [1] : [] };
+    const c = b.querySelector('canvas'); c.width = c.height = 96; c.getContext('2d').drawImage(crossSection(fake, 48), 0, 0, 96, 96);
+    b.addEventListener('click', () => { if (endReady()) beginPlay(id); });
+    box.appendChild(b);
+  });
+  xsCache = { key: '', c: null };
+}
+function beginPlay(heroId) {
+  if (state === 'play') return;
+  state = 'play'; G = newGame(false, heroId); inputLock = 0.35;
+  for (const id of ['title', 'end']) document.getElementById(id).classList.add('hidden');
+  if (G.heroId === 'standard') toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
+  else toast(`You are the ${G.hero.name}!`, G.hero.tag, G.hero.col, 4);
+  toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
+  setTimeout(() => { if (G && !G.demo && G.t < 15) toast('CLICK for a seeker root', 'It hunts for food on its own (8 sugar)', '#b0630a', 3.5); }, 5500);
+}
+function toTitle() {
+  state = 'title'; G = newGame(true);
+  document.getElementById('end').classList.add('hidden');
+  document.getElementById('title').classList.remove('hidden');
+  drawBoards();
+}
+function endGame() {
+  state = 'end'; endAt = performance.now(); SFX.end();
+  const g = G, score = heightCm(g.biomass);
+  document.getElementById('endScore').textContent = score;
+  document.getElementById('endRank').textContent = G.heroId === 'standard' ? rankOf(score) : `${rankOf(score)} · ${G.hero.name}`;
+  const st = [
+    [g.got[W_], 'water drops', 'var(--water)'], [g.got[N_], 'nitrogen', 'var(--n)'], [g.got[P_], 'phosphorus', 'var(--p)'],
+    [Math.round(g.rootLen / g.pxPerCm) + ' cm', 'of roots grown'], [Math.round(g.maxDepth / g.pxPerCm) + ' cm', 'deepest root'], [g.fungi.length, 'fungus friends', 'var(--fun)'],
+    [g.roots.length - 1, 'side roots'], ['x' + g.bestCombo, 'best combo'], [g.chewed, 'rootworm chomps', '#c0392b'],
+  ];
+  document.getElementById('endStats').innerHTML = st.map(s => `<div class="stat"><div class="v" style="color:${s[2] || 'inherit'}">${s[0]}</div><div class="l">${s[1]}</div></div>`).join('');
+  const maxLim = Math.max(...g.limitT), lim = g.limitT.indexOf(maxLim);
+  const lessons = [
+    `<b class="w">Water</b> held your plant back most. When the topsoil dries out, the water is <b>deep down</b>. Deep roots win droughts!`,
+    `<b class="n">Nitrogen</b> held your plant back most. Rain washes nitrogen <b>deeper</b> into the soil. Grow deep to catch it before it's gone!`,
+    `<b class="p">Phosphorus</b> held your plant back most. P stays stuck near the top. Grab it on the way down, and team up with <b class="f">fungus friends</b>: their threads reach P your root can't.`,
+  ];
+  let lesson = maxLim > 3 ? lessons[lim] : `A balanced diet! Your plant got enough of everything. Plants grow only as fast as their <b>scarcest</b> food allows.`;
+  if (g.chewed > 15 && g.armorUses === 0) lesson += `<br><br>The rootworm chewed ${g.chewed} root bits. Next time, press <b>2</b> for lignin armor!`;
+  const le = document.getElementById('endLesson'); le.innerHTML = lesson; le.style.borderLeftColor = maxLim > 3 ? ['#1f86d6', '#23a043', '#8e44d0'][lim] : '#2f9e44';
+  document.getElementById('endFact').innerHTML = '<b>Did you know?</b> ' + FACTS[(Math.random() * FACTS.length) | 0];
+  document.getElementById('nameBox').classList.remove('hidden');
+  const inp = document.getElementById('nameIn'); inp.value = ''; savedIdx = -1;
+  drawBoards();
+  setTimeout(() => { if (state !== 'end') return; document.getElementById('end').classList.remove('hidden'); inp.focus(); }, 3200);
+}
+function saveName() {
+  if (state !== 'end' || savedIdx >= 0) return;
+  const inp = document.getElementById('nameIn');
+  const name = (inp.value || '').toUpperCase().trim().slice(0, 10) || 'ROOTY';
+  const b = loadBoard(), entry = { name, score: heightCm(G.biomass), id: Date.now(), hero: G.heroId === 'standard' ? '' : G.hero.name };
+  b.push(entry); b.sort((a, c) => c.score - a.score); saveBoard(b.slice(0, 50));
+  savedIdx = entry.id; inp.blur(); document.getElementById('nameBox').classList.add('hidden'); drawBoards();
+}
+const heightCm = b => Math.round(12 + b * 3);
+function rankOf(s) {
+  if (s < 60) return 'Tiny Sprout. Try teaming up with fungi!';
+  if (s < 110) return 'Seedling Star';
+  if (s < 170) return 'Cornstalk Champ';
+  if (s < 230) return 'Root Wizard';
+  return 'LEGEND OF THE SOIL';
+}
+const FACTS = [
+  'Corn roots can grow more than 2 meters (6 feet) deep!',
+  'About 8 out of 10 kinds of land plants team up with mycorrhizal fungi.',
+  'Plants and fungi have been trading sugar for nutrients for over 400 million years.',
+  'Fungal threads (hyphae) are much thinner than roots, so they squeeze into tiny spaces in the soil.',
+  'Phosphorus barely moves in soil. Roots and fungi have to go and get it.',
+  'Nitrogen dissolves in water, so heavy rain can wash it down past the roots.',
+  'Roots love old earthworm tunnels. They are highways to the deep soil.',
+  'Some corn roots make air channels (aerenchyma) so they cost less energy to build.',
+  'Some corn roots build extra rings of tough, lignin-filled cells (scientists call it MCS) that help them push through hard, packed soil.',
+  'Corn rootworms are one of the costliest corn pests in the Midwest. They chew corn roots underground.',
+  'Roots grow down because they can sense gravity. It\'s called gravitropism!',
+  'Scientists at Mizzou study roots to breed crops that need less water and fertilizer.',
+];
+function loadBoard() { try { return JSON.parse(localStorage.getItem('rootrace_board') || '[]'); } catch (e) { return []; } }
+function saveBoard(b) { try { localStorage.setItem('rootrace_board', JSON.stringify(b)); } catch (e) {} }
+function drawBoards() {
+  const all = loadBoard(), row = e => `<li class="${e.id === savedIdx ? 'me' : ''}">${escapeHtml(e.name)}${e.hero ? ` <span class="hn">· ${escapeHtml(e.hero)}</span>` : ''} <span class="sc">${e.score} cm</span></li>`, none = '<div class="empty">No scores yet. Be the first!</div>';
+  document.getElementById('boardTitle').innerHTML = all.length ? all.slice(0, 5).map(row).join('') : none;
+  const b = all.slice(0, 8);
+  const html = b.length ? b.map(row).join('') : none;
+  document.getElementById('boardEnd').innerHTML = html;
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// =====================================================================================
+// MESSAGES / FX
+// =====================================================================================
+function toast(title, sub, color = '#2d1e14', dur = 3, urgent = false) {
+  if (!G || G.demo) return; const m = { title, sub, color, dur, t: 0 };
+  if (urgent) G.toasts = [m]; else if (G.toasts.length < 3) G.toasts.push(m);
+}
+function once(key, title, sub, color, dur) { if (G.seen[key]) return; G.seen[key] = 1; toast(title, sub, color, dur); }
+function floatText(x, y, text, color, size = 16) { if (G.texts.length < 60) G.texts.push({ x, y, text, color, t: 0, size }); }
+function burst(x, y, color, n = 6, spd = 60) { for (let i = 0; i < n; i++) { const a = rand(0, 6.283), s = rand(spd * .3, spd); G.fx.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: rand(.3, .6), color }); } }
+
+// =====================================================================================
+// ACTIONS
+// =====================================================================================
+function sideAngle(a, side) { let b = a + side * rand(1.0, 1.4); if (Math.sin(b) < 0.15) b = a - side * rand(1.0, 1.4); return downAngle(b); }
+function branch() {
+  const g = G; if (!g || inputLock > 0 || g.branchCD > 0) return;
+  const m = g.main;
+  if (g.sugar < CFG.seekCost) { floatText(m.tip.x, m.tip.y - 16, 'Need sugar!', '#ffcf4a'); SFX.bump(); return; }
+  const n = m.pts[Math.max(0, m.pts.length - 6)];
+  g.branchSide *= -1; newRoot(g, n.x, n.y, sideAngle(m.tip.a, g.branchSide), false, 'seek', CFG.seekLen);
+  g.sugar -= CFG.seekCost; g.laterals++; g.branchCD = 0.25; SFX.branch(); burst(n.x, n.y, '#fff3d6', 8, 45);
+}
+function autoLateral(g, r) {
+  if (g.sugar < 4 || r.pts.length < 10) return;
+  const n = r.pts[r.pts.length - 8]; r.side *= -1;
+  newRoot(g, n.x, n.y, sideAngle(r.tip.a, r.side), false, 'auto', rand(...(r.main ? CFG.autoLen : CFG.auto2Len)) * g.mod.latLen, r.main ? 1 : 2);
+  g.sugar -= r.main ? CFG.autoCost : CFG.autoCost / 2;
+}
+// Root traits, built with keys 1-3. Aerenchyma and lignin (MCS) go onto the mature root sections that exist now.
+const TRAITS = [
+  { key: '1', id: 'aer', name: 'Air channels', sub: 'Less energy lost = more sugar', cost: () => CFG.aerCost, col: '#2566b8', spr: 'air' },
+  { key: '2', id: 'lig', name: 'Lignin armor', sub: 'Worm-proof, beats hardpan', cost: () => CFG.armorCost, col: '#8a3f14', spr: 'armor' },
+  { key: '3', id: 'hair', name: 'Root hairs', sub: 'Reach food farther, 15 s', cost: () => CFG.hairCost, col: '#2f8a3c', spr: 'hair' },
+  { key: '4', id: 'exu', name: 'Exudates', sub: 'Chemicals nematodes hate', cost: () => CFG.exuCost, col: '#138a8a', spr: 'exu' },
+];
+function trait(id) {
+  const g = G; if (!g || inputLock > 0 || g.traitCD[id] > 0) return;
+  const T = TRAITS.find(t => t.id === id), m = g.main.tip;
+  if (g.sugar < T.cost()) { floatText(m.x, m.y - 16, `${T.name} needs ${T.cost()} sugar!`, '#ffcf4a'); SFX.bump(); return; }
+  if (id === 'hair') {
+    g.buff.hair = 15 * g.mod.hairTime; g.hairUses++;
+    if (!g.demo) toast('ROOT HAIRS!', 'Tiny hairs grab food from farther away (15 s)', '#2f8a3c', 3);
+  } else if (id === 'exu') {
+    g.buff.exu = CFG.exuTime; g.exuUses = (g.exuUses || 0) + 1;
+    for (let i = 0; i < 18; i++) burst(m.x, m.y, '#5fe0d8', 1, 90);
+    if (!g.demo) once('exu', 'EXUDATES!', 'Your root leaks chemicals that nematodes hate. They swim away!', '#138a8a', 3.5);
+  } else {
+    let count = 0;
+    for (const r of g.roots) {
+      const n = r.pts.length, young = r.main ? 10 : 3;
+      for (let i = 0; i < n - young; i++) {
+        const nd = r.pts[i]; if (nd.dead || nd[id]) continue;
+        nd[id] = g.t + (i / n) * 0.7; count++; if (id === 'aer') g.aerNodes++;
+        if (count % 6 === 0) burst(nd.x, nd.y, id === 'aer' ? '#9fd0ff' : '#e0924a', 1, 30);
+      }
+    }
+    if (count < 5) { floatText(m.x, m.y - 16, 'Grow more root first!', '#fff'); return; }
+    if (id === 'aer') { g.aerUses++; if (!g.demo) once('aer', 'AIR CHANNELS!', 'Air pockets need no energy. Less energy lost means more sugar for your plant!', '#2566b8', 4.5); }
+    else { g.armorUses++; if (!g.demo) once('armor', 'LIGNIN ARMOR!', 'Older roots build tough, woody walls. Worms can\'t chew them, and stiff roots push through hard soil!', '#a0521f', 4.5); }
+  }
+  g.sugar -= T.cost(); g.traitCD[id] = 1.2; SFX.armor();
+}
+
+// =====================================================================================
+// UPDATE
+// =====================================================================================
+function update(dt) {
+  const g = G; g.t += dt; inputLock = Math.max(0, inputLock - dt);
+  g.branchCD -= dt; for (const k in g.traitCD) g.traitCD[k] -= dt; for (const k in g.buff) g.buff[k] = Math.max(0, g.buff[k] - dt);
+  g.stun = Math.max(0, g.stun - dt); g.shake = Math.max(0, g.shake - dt * 3);
+  if (!g.demo) events(g, dt); else if (g.t > 75) { G = newGame(true); return; }
+
+  // steer the main tip
+  const m = g.main; let want = null;
+  if (g.demo || QS.has('auto')) want = aiSteer(g, dt);
+  else {
+    const dx = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
+    const dy = (keys.arrowdown || keys.s ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+    if (dx || dy) want = Math.atan2(dy, dx);
+    else if (mouse.active && performance.now() - lastKeyT > 800) {
+      const w = toWorld(g, mouse.x, mouse.y);
+      if (Math.hypot(w.x - m.tip.x, w.y - m.tip.y) > 10) want = Math.atan2(w.y - m.tip.y, w.x - m.tip.x);
+    }
+  }
+  if (want === null) want = lerpAngle(m.tip.a, Math.PI / 2, 0.3); // gravitropism
+  else if (Math.sin(want) < 0) want = Math.cos(want) >= 0 ? 0.06 : Math.PI - 0.06; // pointing up = go sideways that way
+  m.tip.a = downAngle(m.tip.a + clamp(angDiff(m.tip.a, want), -3.2 * dt, 3.2 * dt));
+  if (!g.demo && Math.sin(want) < -0.4 && g.t > 2) once('up', 'Roots can\'t grow UP!', 'Roots feel gravity and grow down or sideways (gravitropism)', '#b0630a', 3.5);
+
+  for (const r of g.roots) if (r.alive) growRoot(g, r, dt);
+
+  // plant: Liebig's barrel. Growth is limited by the scarcest nutrient
+  const rate = (1.3 + g.biomass * 0.035) * dt;
+  const gr = Math.min(g.pool[0], g.pool[1], g.pool[2], rate);
+  g.biomass += gr; for (let i = 0; i < 3; i++) g.pool[i] -= gr;
+  if (gr < rate * 0.9 && g.t > 4) { let lo = 0; for (let i = 1; i < 3; i++) if (g.pool[i] < g.pool[lo]) lo = i; g.limiting = lo; g.limitT[lo] += dt; } else g.limiting = -1;
+  g.pool[W_] = Math.max(0, g.pool[W_] - (0.15 + g.biomass * 0.006) * dt); // transpiration
+  g.wilted = g.pool[W_] <= 0.01 && g.t > 6;
+  const income = (CFG.incomeBase + g.biomass * CFG.incomePerBio) * (g.wilted ? 0.4 : 1);   // photosynthesis
+  const upkeep = CFG.maintPerNode * ((g.liveNodes - g.aerNodes) + CFG.aerMaint * g.aerNodes); // root respiration
+  const drain = upkeep + g.fungi.length * CFG.fungusDrain * g.mod.fungDrain;
+  g.sugar = clamp(g.sugar + (income - drain) * dt, 0, CFG.sugarMax);
+  g.aerSave = CFG.maintPerNode * (1 - CFG.aerMaint) * g.aerNodes; // sugar/s no longer lost to root upkeep
+  if (g.aerNodes > 0) { g.aerFxT = (g.aerFxT || 0) + dt; if (g.aerFxT > 0.25) { g.aerFxT = 0; // gold sparkles rise from air-channel sections
+    const r = g.roots[(Math.random() * g.roots.length) | 0], n = r.pts[(Math.random() * r.pts.length) | 0];
+    if (n && n.aer && g.t >= n.aer) { g.fx.push({ x: n.x, y: n.y, vx: rand(-8, 8), vy: -45, t: 0, life: 0.9, color: '#ffcf4a' }); if (Math.random() < 0.12) floatText(n.x, n.y - 8, '+sugar saved', '#ffcf4a', 12); } } }
+  g.income = lerp(g.income, income, 0.05); g.spend = lerp(g.spend, drain + g.costAcc / Math.max(dt, 1e-3), 0.05); g.costAcc = 0; g.upkeep = upkeep;
+  if (!g.demo && upkeep > 2.5 && !g.aerUses) once('upkeep', 'Big roots cost a lot of sugar!', 'Press 1 for AIR CHANNELS. They make roots cheaper to keep alive', '#2566b8', 4.5);
+  if (!g.demo) {
+    if (g.wilted) once('wilt', 'Your plant is WILTING!', 'No water means no sugar from the leaves. Find water!', '#1f86d6', 3.5);
+    if (g.limiting === P_ && g.limitT[P_] > 4 && g.t > 10) once('limP', 'Need more PHOSPHORUS!', 'Leaves turn purple without P. Find a fungus friend!', '#8e44d0', 4);
+    if (g.limiting === N_ && g.limitT[N_] > 4 && g.t > 10) once('limN', 'Need more NITROGEN!', 'Leaves turn yellow without N', '#23a043', 3.5);
+  }
+
+  absorb(g, dt);
+  for (let t = 0; t < 3; t++) {
+    g.respawnAcc[t] += CFG.respawn[t] * g.area * dt;
+    const count = g.parts.reduce((c, p) => c + (p.t === t ? 1 : 0), 0);
+    while (g.respawnAcc[t] >= 1) { g.respawnAcc[t] -= 1; if (count < g.target[t] * (t === W_ && g.drought ? 0.7 : 1)) spawnPart(g, t); }
+  }
+  g.powerAcc += dt; if (g.powerAcc > 10 && g.powers.length < CFG.powerups) { g.powerAcc = 0; spawnPower(g); }
+
+  for (let i = g.spores.length - 1; i >= 0; i--) {
+    const s = g.spores[i];
+    for (const r of g.roots) if ((r.alive || r.main) && Math.hypot(r.tip.x - s.x, r.tip.y - s.y) < 20) { addFungus(g, s.x, s.y); g.spores.splice(i, 1); break; }
+  }
+  for (const f of g.fungi) if (f.R < f.maxR) { f.R = Math.min(f.maxR, f.R + 25 * dt); colonizeArea(g, f); }
+  for (let i = g.powers.length - 1; i >= 0; i--) { const p = g.powers[i]; if (Math.hypot(m.tip.x - p.x, m.tip.y - p.y) < 22) { g.powers.splice(i, 1); power(g, p); } }
+
+  for (const n of g.nems) nemUpdate(g, n, dt);
+  if (g.worm) wormUpdate(g, dt);
+  for (const b of g.burrows) { b.worm += b.wdir * dt * 0.06; if (b.worm > 1 || b.worm < 0) { b.wdir *= -1; b.worm = clamp(b.worm, 0, 1); } }
+
+  if (g.buff.exu > 0) { g.puffT += dt; if (g.puffT > 0.12) { g.puffT = 0;
+      for (const r of g.roots) if (r.main || (r.alive && r.kind === 'seek')) g.puffs.push({ x: r.tip.x, y: r.tip.y, t: 0, R: r.main ? CFG.exuR : CFG.exuR * 0.6 }); } }
+  for (const f of g.puffs) f.t += dt; g.puffs = g.puffs.filter(f => f.t < 2.5);
+  g.calloutT += dt; if (g.calloutT > 0.25) { g.calloutT = 0; scanCallouts(g); }
+  for (const c of g.callouts) c.t += dt; g.callouts = g.callouts.filter(c => c.t < 3.5);
+  g.comboT -= dt; if (g.comboT <= 0) g.combo = 0;
+  for (const f of g.fx) { f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 0.94; f.vy *= 0.94; }
+  g.fx = g.fx.filter(f => f.t < f.life);
+  for (const t of g.texts) { t.t += dt; t.y -= 24 * dt; } g.texts = g.texts.filter(t => t.t < 1.2);
+  if (g.toasts.length) { g.toasts[0].t += dt; if (g.toasts[0].t > g.toasts[0].dur) g.toasts.shift(); }
+  g.maxDepth = Math.max(g.maxDepth, m.tip.y);
+  const vs = view(g).s, visH = H / vs;
+  g.camY = lerp(g.camY, clamp(m.tip.y - visH * 0.45, -g.sky, g.D + 12 - visH), 1 - Math.pow(0.03, dt));
+
+  if (!g.demo && g.t >= g.dur && state === 'play') endGame();
+}
+
+function growRoot(g, r, dt) {
+  let spd = r.main ? CFG.tipSpeed * g.mod.speed : r.kind === 'seek' ? CFG.seekSpeed : CFG.autoSpeed * (r.order === 1 ? 1 : 0.75);
+  if (r.main) { if (g.stun > 0) spd = 0; if (g.buff.auxin > 0) spd *= 1.7; }
+  else if (r.kind === 'seek') {
+    if (!r.target || r.target.fly || !g.parts.includes(r.target) || g.t - (r.tT || 0) > 0.6) { r.target = nearestPart(g, r.tip.x, r.tip.y, 120); r.tT = g.t; }
+    const want = r.target ? Math.atan2(r.target.y - r.tip.y, r.target.x - r.tip.x) : lerpAngle(r.tip.a, Math.PI / 2, 0.2);
+    r.tip.a = downAngle(r.tip.a + clamp(angDiff(r.tip.a, want), -2.4 * dt, 2.4 * dt));
+  } else r.tip.a = downAngle(lerpAngle(r.tip.a, Math.PI / 2, 0.25 * dt) + Math.sin(g.t * 2 + r.born * 7) * 0.4 * dt);
+
+  const inBurrow = nearBurrow(g, r.tip.x, r.tip.y);
+  if (inBurrow) { spd *= 2.4; if (r.main && !g.demo) once('burrow', 'EARTHWORM HIGHWAY!', 'Roots zoom down old worm tunnels', '#c2185b', 3); }
+  const inPan = r.tip.y > g.hardY && r.tip.y < g.hardY + g.hardH;
+  if (inPan && !inBurrow) { spd *= g.mod.pan || (g.armorUses ? 0.75 : 0.4); if (r.main && !g.demo) once('pan', 'HARDPAN! Packed soil', 'Slow going. Find a worm tunnel, or press 2 for lignin armor to push through', '#5d4f45', 3.5); }
+  if (g.sugar <= 0.5) { spd *= 0.3; if (r.main && !g.demo) once('nosugar', 'Out of SUGAR!', 'Leaves make sugar as the plant grows. Collect all 3 foods!', '#b0630a', 3.5); }
+  let step = spd * dt; if (step <= 0) return;
+  if (!r.main && r.len + step > r.maxLen) { step = r.maxLen - r.len; r.alive = false; }
+  let a = r.tip.a, nx = r.tip.x + Math.cos(a) * step, ny = r.tip.y + Math.sin(a) * step;
+  const rock = inRock(g, nx, ny);
+  if (rock) { // slide along the rock, never upward
+    const vx = r.tip.x - rock.x, vy = r.tip.y - rock.y;
+    const t1 = Math.atan2(vy, vx) + Math.PI / 2, t2 = t1 - Math.PI;
+    a = Math.abs(angDiff(r.tip.a, t1)) < Math.abs(angDiff(r.tip.a, t2)) ? t1 : t2;
+    if (Math.sin(a) < -0.02) a = a === t1 ? t2 : t1;
+    nx = r.tip.x + Math.cos(a) * step; ny = r.tip.y + Math.sin(a) * step;
+    if (inRock(g, nx, ny)) { nx = r.tip.x + Math.sign(Math.cos(a) || 1) * step; ny = r.tip.y; if (inRock(g, nx, ny)) { nx = r.tip.x; ny = r.tip.y; if (!r.main) r.alive = false; } }
+    if (r.main && !g.demo) { if (Math.random() < dt * 4) SFX.bump(); once('rock', 'ROCK!', 'Roots can\'t break rocks. Steer around!', '#5d4f45', 2.5); }
+  }
+  if (nx < 5 || nx > g.worldW - 5) { nx = clamp(nx, 5, g.worldW - 5); r.tip.a = lerpAngle(r.tip.a, Math.PI / 2, 0.15); if (!r.main) r.alive = false; }
+  if (ny > g.D - 8) { ny = g.D - 8; if (r.main && !g.demo) once('bottom', 'You reached the BOTTOM!', 'Now explore sideways for more food', '#2d1e14', 3); if (!r.main) r.alive = false; }
+  if (r.main && ny >= g.D - 8.5) {
+    if (Math.sin(r.tip.a) > 0.9) r.tip.a = nx < g.worldW / 2 ? 0.06 : Math.PI - 0.06;
+    if (nx <= 5.5 && Math.cos(r.tip.a) < 0) r.tip.a = 0.06;
+    if (nx >= g.worldW - 5.5 && Math.cos(r.tip.a) > 0) r.tip.a = Math.PI - 0.06;
+  }
+  const moved = Math.hypot(nx - r.tip.x, ny - r.tip.y);
+  r.tip.x = nx; r.tip.y = ny; r.len += moved; r.acc += moved; g.rootLen += moved;
+  const cost = moved * CFG.growCost * g.mod.cost * (r.main ? 1 : 0.7); g.sugar = Math.max(0, g.sugar - cost); g.costAcc += cost;
+  if (r.acc >= 5) { r.acc = 0; addNode(g, r, nx, ny); }
+  if (!r.alive) addNode(g, r, nx, ny);
+  if (r.main || r.kind === 'seek') { r.latAcc += moved; if (r.latAcc > r.latGap) { r.latAcc = 0; r.latGap = rand(...(r.main ? CFG.autoGap : CFG.seekGap)) * g.mod.gap; autoLateral(g, r); } }
+}
+function nearBurrow(g, x, y) {
+  for (const b of g.burrows) { const p0 = b.pts[0], p1 = b.pts[b.pts.length - 1]; if (y < p0[1] - 8 || y > p1[1] + 8) continue;
+    const i = clamp(Math.round((y - p0[1]) / 8), 0, b.pts.length - 1); if (Math.abs(b.pts[i][0] - x) < 10) return true; }
+  return false;
+}
+function nearestPart(g, x, y, R) {
+  let best = null, bd = R * R;
+  for (const p of g.parts) { if (p.fly || p.y < y - 6) continue; const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+function nearestNode(g, x, y, R, filter) {
+  const cs = g.cell; let best = null, bd = R * R;
+  for (let cy = Math.max(0, ((y - R) / cs) | 0); cy <= Math.min(g.gh - 1, ((y + R) / cs) | 0); cy++)
+    for (let cx = Math.max(0, ((x - R) / cs) | 0); cx <= Math.min(g.gw - 1, ((x + R) / cs) | 0); cx++)
+      for (const n of g.grid[cy * g.gw + cx]) { if (filter && !filter(n)) continue; const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+function aiSteer(g, dt) {
+  const m = g.main; g.aiT -= dt;
+  if (g.aiT <= 0 || !g.aiTarget) {
+    g.aiT = 0.7; let best = null, bs = -1e9;
+    for (const s of g.spores) { if (s.y < m.tip.y - 5) continue; const d = Math.hypot(s.x - m.tip.x, s.y - m.tip.y); if (d < 300 && 420 - d > bs) { bs = 420 - d; best = s; } }
+    for (const p of g.parts) { if (p.fly || p.y < m.tip.y - 5) continue; const d = Math.hypot(p.x - m.tip.x, p.y - m.tip.y); if (d > 180) continue;
+      const sc = 200 - d + (CFG.poolMax - g.pool[p.t]) * 5; if (sc > bs) { bs = sc; best = p; } }
+    if (!best) best = { x: rand(40, g.worldW - 40), y: Math.min(g.D - 20, m.tip.y + rand(30, 120)), wander: true };
+    g.aiTarget = best;
+    if (g.sugar > 25 && Math.random() < 0.6) branch();
+    if (g.worm && g.sugar > 30 && Math.random() < 0.5) trait('lig');
+    if (g.liveNodes > 120 && g.aerNodes < g.liveNodes * 0.6 && g.sugar > 30) trait('aer');
+    if (g.sugar > 60 && g.buff.hair <= 0 && Math.random() < 0.3) trait('hair');
+    if (g.buff.exu <= 0 && g.sugar > 15 && g.nems.some(n => Math.hypot(n.x - m.tip.x, n.y - m.tip.y) < 150)) trait('exu');
+  }
+  const T = g.aiTarget;
+  if (T && (T.wander || g.parts.includes(T) || g.spores.includes(T))) { if (T.wander && Math.hypot(T.x - m.tip.x, T.y - m.tip.y) < 15) g.aiTarget = null; return Math.atan2(T.y - m.tip.y, T.x - m.tip.x); }
+  g.aiTarget = null; return null;
+}
+
+function absorb(g, dt) {
+  const hair = g.buff.hair > 0, cs = g.cell, rain = g.raining;
+  const tips = g.roots.filter(r => r.alive || r.main).map(r => r.tip);
+  for (let i = g.parts.length - 1; i >= 0; i--) {
+    const p = g.parts[i];
+    if (p.fly) {
+      p.fly.t += dt * (p.fly.viaFungus ? 2 : 4); const k = Math.min(1, p.fly.t);
+      p.x = lerp(p.fly.x0, p.fly.n.x, k * k); p.y = lerp(p.fly.y0, p.fly.n.y, k * k);
+      if (k >= 1) { credit(g, p); g.parts.splice(i, 1); }
+      continue;
+    }
+    if (p.fade) { p.a -= dt * 0.6; if (p.a <= 0) g.parts.splice(i, 1); continue; }
+    if (p.t !== P_) { // water and N move with the soil water; P stays put
+      p.ph += dt; p.x += Math.sin(p.ph * 1.3) * 3 * dt; p.y += Math.cos(p.ph * 0.9) * 2.2 * dt;
+      if (p.t === N_) p.y += (rain ? 30 : 1.6) * dt;
+      if (p.t === W_ && rain && p.y < g.D * 0.3) p.y += 14 * dt;
+      if (p.y > g.D - 4) { if (p.t === N_ && !g.demo) once('leach', 'Nitrogen LEACHED away!', 'It washed down past the roots. Lost for good!', '#23a043', 3); g.parts.splice(i, 1); continue; }
+    }
+    let hit = null;
+    for (const t of tips) { const r = RAD.tip[p.t] * (hair ? 1.8 : 1) * (p.t === P_ ? g.mod.tipP : g.mod.uptake); if ((p.x - t.x) ** 2 + (p.y - t.y) ** 2 < r * r) { hit = t; break; } }
+    if (!hit) {
+      const R = Math.max(RAD.col[p.t], RAD.node[p.t] + (hair ? 6 : 0));
+      const x0 = Math.max(0, ((p.x - R) / cs) | 0), x1 = Math.min(g.gw - 1, ((p.x + R) / cs) | 0);
+      const y0 = Math.max(0, ((p.y - R) / cs) | 0), y1 = Math.min(g.gh - 1, ((p.y + R) / cs) | 0);
+      outer: for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+        const cell = g.grid[cy * g.gw + cx];
+        for (let j = 0; j < cell.length; j++) {
+          const n = cell[j]; if (n.dead) continue;
+          let r = n.col ? RAD.col[p.t] : (RAD.node[p.t] + (hair ? 6 : 0)) * (p.t === P_ ? 1 : g.mod.uptake);
+          if (n.lig && p.t !== P_) r *= 0.6; // woody walls take up less water
+          if ((p.x - n.x) ** 2 + (p.y - n.y) ** 2 < r * r) { hit = n; break outer; }
+        }
+      }
+    }
+    if (hit) p.fly = { x0: p.x, y0: p.y, n: { x: hit.x, y: hit.y }, t: 0, viaFungus: !!hit.col && p.t === P_ };
+  }
+}
+function credit(g, p) {
+  g.got[p.t]++; g.pool[p.t] = Math.min(CFG.poolMax, g.pool[p.t] + 1);
+  g.combo++; g.comboT = 1.3; g.bestCombo = Math.max(g.bestCombo, g.combo);
+  if (g.combo >= 5 && g.combo % 5 === 0) { const bonus = Math.min(6, 2 + g.combo / 10) | 0; floatText(p.x, p.y - 10, `COMBO x${g.combo}! +${bonus} sugar`, '#ffcf4a', 17); g.sugar = Math.min(CFG.sugarMax, g.sugar + bonus); }
+  SFX.pick(p.t, g.combo); burst(p.x, p.y, TCOL[p.t], 4, 36);
+  if (!g.demo) {
+    if (p.t === P_) once('firstP', 'PHOSPHORUS!', 'P doesn\'t move in soil. You have to go get it', '#8e44d0', 3);
+    if (p.fly.viaFungus) once('fungP', 'Your FUNGUS grabbed P for you!', 'In return it gets a little sugar. Fair trade!', '#e07b12', 3.5);
+  }
+}
+function addFungus(g, x, y) {
+  g.fungi.push({ x, y, R: 16, maxR: CFG.fungusR * g.mod.fungR, born: g.t });
+  SFX.fungus(); burst(x, y, '#ffb35c', 24, 120); floatText(x, y - 18, 'FUNGUS FRIEND!', '#ffb35c', 20);
+  const n = g.fungi.length;
+  if (n === 1) toast('FUNGUS FRIEND JOINED!', 'Its threads reach 5x farther for phosphorus. It eats a little sugar', '#e07b12', 4.5);
+  else if (n === 3) toast('FUNGAL NETWORK!', 'The underground web is growing. P magnet ON!', '#e07b12', 3.5);
+  else toast(`Fungus friend #${n}!`, 'Bigger network, more phosphorus', '#e07b12', 2.5);
+}
+function colonizeArea(g, f) {
+  const cs = g.cell, R = f.R;
+  for (let cy = Math.max(0, ((f.y - R) / cs) | 0); cy <= Math.min(g.gh - 1, ((f.y + R) / cs) | 0); cy++)
+    for (let cx = Math.max(0, ((f.x - R) / cs) | 0); cx <= Math.min(g.gw - 1, ((f.x + R) / cs) | 0); cx++)
+      for (const n of g.grid[cy * g.gw + cx]) if (!n.col && !n.dead && (n.x - f.x) ** 2 + (n.y - f.y) ** 2 < R * R) colonize(g, n);
+}
+function power(g, p) {
+  SFX.power(); burst(p.x, p.y, '#ffd76a', 20, 110);
+  if (p.type === 'auxin') { g.buff.auxin = 8; toast('AUXIN RUSH!', 'Growth hormone: SUPER SPEED! (8 s)', '#d98a00', 2.5); }
+}
+const puffGrow = t => 0.25 + 0.75 * Math.min(1, t / 1.2);
+function nemUpdate(g, n, dt) {
+  const m = g.main.tip; n.ph += dt * 6; n.cd = Math.max(0, n.cd - dt); n.flee = Math.max(0, n.flee - dt);
+  const d = Math.hypot(m.x - n.x, m.y - n.y);
+  let want = n.a + Math.sin(n.ph * 0.2) * 0.5, spd = 14;
+  if (d < 150 && n.cd <= 0 && n.flee <= 0) { want = Math.atan2(m.y - n.y, m.x - n.x); spd = 34; }
+  if (n.flee > 0) spd = 44;
+  n.a += clamp(angDiff(n.a, want), -2.5 * dt, 2.5 * dt);
+  if (n.flee <= 0) for (const f of g.puffs) { const fr = f.R * puffGrow(f.t);
+    if (Math.hypot(f.x - n.x, f.y - n.y) < fr + 6) { n.flee = 1.8; n.a = Math.atan2(n.y - f.y, n.x - f.x); floatText(n.x, n.y - 12, 'Yuck! Exudates!', '#5fe0d8', 14); break; } }
+  if (!g.demo && d < 170 && n.cd <= 0 && n.flee <= 0 && g.t > 3) once('nemaWarn', 'NEMATODE COMING!', 'Press 4 to release EXUDATES, root chemicals that scare it away', '#138a8a', 4);
+  if (n.flee <= 0) { const c = nearestNode(g, n.x, n.y, 26, q => q.col && !q.dead);
+    if (c) { n.flee = 1.5; n.a = Math.atan2(n.y - c.y, n.x - c.x); floatText(n.x, n.y - 12, 'Blocked by fungus!', '#ffb35c', 14);
+      if (!g.demo) once('fungShield', 'FUNGUS SHIELD!', 'Fungi help protect roots from nematodes', '#e07b12', 3); } }
+  const nx = n.x + Math.cos(n.a) * spd * dt, ny = n.y + Math.sin(n.a) * spd * dt;
+  if (inRock(g, nx, ny, 5) || nx < 8 || nx > g.worldW - 8 || ny < 40 || ny > g.D - 12) n.a += Math.PI * 0.7; else { n.x = nx; n.y = ny; }
+  if (d < 15 && n.cd <= 0 && g.stun <= 0 && g.buff.exu <= 0) {
+    n.cd = 6; n.flee = 2; n.a += Math.PI; g.stun = 1.1; g.shake = 1; g.bites++;
+    g.sugar = Math.max(0, g.sugar - 8); SFX.bite(); floatText(m.x, m.y - 16, 'OUCH! -8 sugar', '#ff6b6b', 18); burst(m.x, m.y, '#ff6b6b', 12, 80);
+    if (!g.demo) once('nema', 'NEMATODE BITE!', 'These tiny worms eat roots. Dodge them!', '#c0392b', 3);
+  }
+}
+// Corn rootworm: chews every root section that isn't armored
+function spawnWorm(g) {
+  // burst out of the soil near the player so the attack is on screen
+  const m = g.main.tip, side = m.x < g.worldW / 2 ? 1 : -1;
+  const x = clamp(m.x + side * 250, 30, g.worldW - 30), y = clamp(m.y + rand(-90, 40), 60, g.D - 40);
+  g.worm = { x, y, a: side > 0 ? Math.PI : 0, t: 0, ph: 0, tgt: null, retarget: 0, chew: 0, say: 0, biteCD: 0, trail: [], chompT: 0 };
+  burst(x, y, '#6b4426', 30, 120); burst(x, y, '#f6efdf', 10, 80); g.shake = 0.6;
+}
+function nearestEdible(g, x, y) {
+  let best = null, bd = Infinity;
+  for (const r of g.roots) for (let i = 0; i < r.pts.length; i++) { const n = r.pts[i]; if (n.dead || n.lig) continue; const d = (n.x - x) ** 2 + (n.y - y) ** 2; if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+function wormUpdate(g, dt) {
+  const w = g.worm; w.t += dt; w.ph += dt * 7; w.say -= dt; w.biteCD -= dt; w.retarget -= dt;
+  if (w.t > CFG.wormLife) {
+    burst(w.x, w.y, '#fff3c4', 30, 130); floatText(w.x, w.y - 20, 'It turned into a beetle and flew away!', '#fff6a0', 16);
+    toast('Phew! The rootworm left', 'Rootworms grow up into beetles', '#2f9e44', 3); g.worm = null; return;
+  }
+  if (w.retarget <= 0 || !w.tgt || w.tgt.dead || w.tgt.lig) { w.tgt = nearestEdible(g, w.x, w.y); w.retarget = 0.4; }
+  let want = w.a + Math.sin(w.t) * 0.5, spd = 16, d = Infinity;
+  if (w.tgt) { d = Math.hypot(w.tgt.x - w.x, w.tgt.y - w.y); want = Math.atan2(w.tgt.y - w.y, w.tgt.x - w.x); spd = 32; }
+  w.chompT -= dt;
+  w.a += clamp(angDiff(w.a, want), -3 * dt, 3 * dt);
+  if (d > 7) { w.x = clamp(w.x + Math.cos(w.a) * spd * dt, 8, g.worldW - 8); w.y = clamp(w.y + Math.sin(w.a) * spd * dt, 20, g.D - 8); }
+  else { w.chew += dt; if (w.chew > 0.14) { w.chew = 0; w.tgt.dead = true; g.chewed++; g.liveNodes--; if (w.tgt.aer) g.aerNodes--; g.sugar = Math.max(0, g.sugar - 0.35); burst(w.tgt.x, w.tgt.y, '#4a2d16', 5, 40); burst(w.tgt.x, w.tgt.y, '#f7e9c8', 2, 30); SFX.chomp(); if (w.chompT <= 0) { w.chompT = 1; floatText(w.x, w.y - 22, 'CHOMP!', '#ff6b5a', 18); } w.tgt = nearestEdible(g, w.x, w.y); } }
+  w.trail.unshift([w.x, w.y]); if (w.trail.length > 40) w.trail.pop();
+  if (w.say <= 0) { const n = nearestNode(g, w.x, w.y, 22); if (n && n.lig) { floatText(w.x, w.y - 16, 'Too tough to chew!', '#ffcf8a', 14); w.say = 2; } }
+  const m = g.main.tip;
+  if (Math.hypot(m.x - w.x, m.y - w.y) < 24 && g.stun <= 0 && w.biteCD <= 0) { w.biteCD = 4; g.stun = 1.2; g.shake = 1; g.sugar = Math.max(0, g.sugar - 8); SFX.bite(); floatText(m.x, m.y - 16, 'CHOMP! -8 sugar', '#ff6b6b', 18); }
+}
+// Teach each thing the first time the root gets near it: a label pinned to the object
+function scanCallouts(g) {
+  if (g.demo || g.callouts.length >= 2) return;
+  const m = g.main.tip, near = (o, R = 190) => Math.hypot(o.x - m.x, o.y - m.y) < R && o.y > m.y - 80;
+  const add = (key, obj, text, col) => { if (g.seen['c_' + key] || !obj) return false; g.seen['c_' + key] = 1; g.callouts.push({ obj, text, col, t: 0 }); return true; };
+  if (g.worm && add('rootworm', g.worm, 'Rootworm! Press 2', '#c0392b')) return;
+  for (const [t, key, text, col] of [[W_, 'w', 'Water: grab it!', '#1f86d6'], [N_, 'n', 'Nitrogen (N): grab it!', '#23a043'], [P_, 'p', 'Phosphorus (P): it never moves!', '#8e44d0']])
+    if (!g.seen['c_' + key]) { const p = g.parts.find(p => p.t === t && !p.fly && near(p)); if (p && add(key, p, text, col)) return; }
+  const sp = g.spores.find(o => near(o, 240)); if (sp && add('spore', sp, 'Fungus friend: touch it!', '#e07b12')) return;
+  const pw = g.powers.find(o => near(o)); if (pw && add('auxin', pw, 'Speed boost!', '#b87400')) return;
+  const ne = g.nems.find(o => near(o, 220)); if (ne && add('nema', ne, 'Nematode! Press 4', '#c0392b')) return;
+  const rk = g.rocks.find(o => near(o, 150)); if (rk && add('rock', rk, 'Rock: go around', '#5d4f45')) return;
+  for (const b of g.burrows) { const q = b.pts.find(q => Math.hypot(q[0] - m.x, q[1] - m.y) < 170); if (q && add('burrow', { x: q[0], y: q[1] }, 'Worm tunnel = fast lane!', '#c2185b')) return; }
+}
+function drawCallouts(g) {
+  for (const c of g.callouts) {
+    const a = Math.min(1, c.t * 6, (3.5 - c.t) * 3), o = c.obj, bob = Math.sin(g.t * 5) * 2, pulse = 1 + Math.sin(g.t * 8) * 0.12;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.strokeStyle = c.col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(o.x, o.y, 17 * pulse, 0, 7); ctx.stroke();
+    ctx.font = font(15, 700); const w = ctx.measureText(c.text).width + 22, bx = clamp(o.x - w / 2, 4, g.worldW - w - 4), by = o.y - 58 + bob;
+    ctx.fillStyle = c.col; ctx.beginPath(); ctx.roundRect(bx, by, w, 28, 14); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(o.x - 7, by + 27); ctx.lineTo(o.x + 7, by + 27); ctx.lineTo(o.x, o.y - 20); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.text, bx + w / 2, by + 15);
+    ctx.restore();
+  }
+}
+function events(g, dt) {
+  const t = g.t;
+  if (!g.rainDone && t >= CFG.rainAt) {
+    g.rainDone = true; g.raining = true; g.rain = 7; SFX.event();
+    toast('RAINSTORM!', 'Rain washes nitrogen DEEPER. Chase it down!', '#2566b8', 4, true);
+    for (let i = 0; i < 45 * g.area; i++) spawnPart(g, W_, { top: true });
+    for (let i = 0; i < 20 * g.area; i++) spawnPart(g, N_, { top: true });
+  }
+  if (g.raining) { g.rain -= dt; if (g.rain <= 0) g.raining = false; }
+  if (!g.wormDone && t >= CFG.wormAt) {
+    g.wormDone = true; spawnWorm(g); SFX.event();
+    toast('CORN ROOTWORM ATTACK!', 'It chews roots! Press 2 for LIGNIN ARMOR', '#c0392b', 5, true);
+  }
+  if (!g.drought && t >= CFG.droughtAt) {
+    g.drought = true; SFX.event();
+    toast('DROUGHT!', 'The topsoil is drying out. Deep roots find water!', '#d35400', 4.5, true);
+    for (const p of g.parts) if (p.t === W_ && p.y < g.D * 0.45) p.fade = true;
+  }
+  if (g.drought) g.droughtT = Math.min(1, g.droughtT + dt / 3);
+  const left = Math.ceil(g.dur - t);
+  if (left <= 10 && left < g.lastTick && left > 0) { g.lastTick = left; SFX.tick(left <= 3); if (left === 10) toast('10 SECONDS LEFT!', 'Grab everything you can!', '#c0392b', 2, true); }
+}
+
+// =====================================================================================
+// RENDER
+// =====================================================================================
+function panelWidth() { return clamp(Math.round(W * 0.18), 220, 290); }
+function view(g) {
+  // play: world width fills the play area, camera scrolls; end (reveal 0 -> 1): zoom out to the whole soil profile
+  const aw = W - panelWidth(), vh = g.sky + g.D + 12, k = g.reveal * g.reveal * (3 - 2 * g.reveal);
+  const s = lerp(aw / g.worldW, Math.min(aw / g.worldW, H / vh), k);
+  const top = lerp(g.camY, -g.sky, k), padY = k * Math.max(0, (H - vh * s) / 2);
+  return { s, ox: (aw - g.worldW * s) / 2, oy: -top * s + padY };
+}
+function toWorld(g, sx, sy) { const v = view(g); return { x: (sx - v.ox) / v.s, y: (sy - v.oy) / v.s }; }
+
+function render() {
+  const g = G; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#241810'; ctx.fillRect(0, 0, W, H);
+  const v = view(g), sh = g.shake > 0 ? g.shake * 5 : 0;
+  ctx.save(); ctx.translate(v.ox + rand(-sh, sh), v.oy + rand(-sh, sh)); ctx.scale(v.s, v.s);
+
+  drawSky(g);
+  ctx.drawImage(g.soilTex, 0, 0, g.worldW, g.D);
+  ctx.fillStyle = '#4d4642'; ctx.fillRect(0, g.D, g.worldW, 12);
+  if (g.droughtT > 0) { const dg = ctx.createLinearGradient(0, 0, 0, g.D * 0.45); dg.addColorStop(0, `rgba(215,160,95,${0.4 * g.droughtT})`); dg.addColorStop(1, 'rgba(215,160,95,0)'); ctx.fillStyle = dg; ctx.fillRect(0, 0, g.worldW, g.D * 0.45); }
+  drawDepthRuler(g);
+  for (const f of g.fungi) { const rg = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.R); rg.addColorStop(0, 'rgba(255,190,110,.13)'); rg.addColorStop(1, 'rgba(255,190,110,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(f.x, f.y, f.R, 0, 7); ctx.fill(); }
+  for (const b of g.burrows) drawEarthworm(g, b);
+  // P pulled in by a fungus travels along a glowing hypha
+  ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,184,107,.85)'; ctx.beginPath();
+  for (const p of g.parts) if (p.fly && p.fly.viaFungus) { ctx.moveTo(p.fly.x0, p.fly.y0); ctx.lineTo(p.fly.n.x, p.fly.n.y); }
+  ctx.stroke();
+  for (const p of g.parts) { const s = p.fly ? 24 * (1 - p.fly.t * 0.5) : 24 + Math.sin(g.t * 3 + p.ph) * 1.5; ctx.globalAlpha = p.a; ctx.drawImage(TSPR[p.t], p.x - s / 2, p.y - s / 2, s, s); }
+  ctx.globalAlpha = 1;
+  // hyphae
+  ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(255,238,210,.5)'; ctx.beginPath();
+  for (const th of g.threads) { const k = clamp((g.t - th.born) / 0.8, 0, 1); if (k <= 0) continue; const n = Math.max(2, Math.floor(th.pts.length / 2 * k));
+    ctx.moveTo(th.pts[0], th.pts[1]); for (let i = 1; i < n; i++) ctx.lineTo(th.pts[i * 2], th.pts[i * 2 + 1]); }
+  ctx.stroke();
+  drawRoots(g);
+  for (const f of g.puffs) { const r = f.R * puffGrow(f.t), a = 0.34 * (1 - f.t / 2.5);
+    const cg = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r); cg.addColorStop(0, `rgba(95,224,216,${a})`); cg.addColorStop(1, 'rgba(95,224,216,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 7); ctx.fill(); }
+  if (g.buff.exu > 0) for (const r of g.roots) if (r.main || (r.alive && r.kind === 'seek')) { // fresh droplets oozing from the tip
+    ctx.fillStyle = 'rgba(200,255,250,.85)'; for (let i = 0; i < 5; i++) { const a = g.t * 4 + i * 1.26, rr = 6 + ((g.t * 30 + i * 9) % 14); ctx.beginPath(); ctx.arc(r.tip.x + Math.cos(a) * rr, r.tip.y + Math.sin(a) * rr, 1.4, 0, 7); ctx.fill(); } }
+  for (const s of g.spores) { const sz = 36 + Math.sin(g.t * 3 + s.ph) * 3; ctx.drawImage(SPR.spore, s.x - sz / 2, s.y - sz / 2, sz, sz); }
+  for (const p of g.powers) { const sz = 28 + Math.sin(g.t * 4 + p.ph) * 2; ctx.save(); ctx.translate(p.x, p.y + Math.sin(g.t * 2 + p.ph) * 2); ctx.drawImage(SPR[p.type], -sz / 2, -sz / 2, sz, sz); ctx.restore(); }
+  for (const n of g.nems) drawNema(n);
+  if (g.worm) drawRootworm(g, g.worm);
+  for (const f of g.fx) { ctx.globalAlpha = 1 - f.t / f.life; ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, 1.8, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  const hpx = Math.min(heightCm(g.biomass), CFG.plantCmMax * 1.08) * g.plantPx;
+  drawPlant(ctx, g.plantX, hpx, g.biomass, g.limiting, g.wilted, g.t);
+  drawHeightRuler(g, hpx);
+  drawCallouts(g);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const t of g.texts) { ctx.globalAlpha = Math.min(1, (1.2 - t.t) * 2); ctx.font = font(t.size, 700); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(30,18,10,.8)'; ctx.strokeText(t.text, t.x, t.y); ctx.fillStyle = t.color; ctx.fillText(t.text, t.x, t.y); }
+  ctx.globalAlpha = 1;
+  if (!g.demo && mouse.active && state === 'play') {
+    const w = toWorld(g, mouse.x, mouse.y);
+    if (w.y > 0) { ctx.strokeStyle = 'rgba(255,245,220,.3)'; ctx.setLineDash([3, 6]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(g.main.tip.x, g.main.tip.y); ctx.lineTo(w.x, w.y); ctx.stroke(); ctx.setLineDash([]); }
+  }
+  ctx.restore();
+  drawPanel(g);
+  if (!g.demo) drawHUD(g, v);
+}
+
+function drawSky(g) {
+  const S = g.sky, k = g.droughtT, Wd = g.worldW;
+  const sk = ctx.createLinearGradient(0, -S, 0, 0);
+  if (g.raining) { sk.addColorStop(0, '#7d8fa3'); sk.addColorStop(1, '#c3cfd9'); }
+  else { sk.addColorStop(0, k > 0 ? '#ffbf73' : '#8fd0ff'); sk.addColorStop(1, k > 0 ? '#fff0d2' : '#e3f5ff'); }
+  ctx.fillStyle = sk; ctx.fillRect(-Wd, -S - 600, Wd * 3, S + 600);
+  if (!g.raining) { const sx = Wd * 0.86, sy = -S * 0.66, sr = S * 0.11 * (1 + k * 0.25);
+    const halo = ctx.createRadialGradient(sx, sy, sr * 0.8, sx, sy, sr * 3); halo.addColorStop(0, k > 0 ? 'rgba(255,150,60,.45)' : 'rgba(255,240,170,.55)'); halo.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(sx, sy, sr * 3, 0, 7); ctx.fill();
+    ctx.fillStyle = k > 0 ? '#ff9a3d' : '#ffe27a'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 7); ctx.fill(); }
+  // far and near hills
+  const hills = (base, amp, f, ph, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); for (let x = 0; x <= Wd; x += 10) ctx.lineTo(x, -base - Math.sin(x / f + ph) * amp - Math.sin(x / (f * 0.43) + ph * 2) * amp * 0.35); ctx.lineTo(Wd, 0); ctx.closePath(); ctx.fill(); };
+  hills(S * 0.2, S * 0.07, 260, 1, k > 0 ? '#e6d49c' : '#c4e6b4');
+  hills(S * 0.09, S * 0.05, 170, 3, k > 0 ? '#cdbb72' : '#a3d68d');
+  // clouds
+  ctx.fillStyle = g.raining ? 'rgba(98,110,126,.95)' : 'rgba(255,255,255,.9)';
+  for (let i = 0; i < 4; i++) { const cx = ((i * 360 + g.t * 10) % (Wd + 300)) - 150, cy = -S * (0.62 + (i % 2) * 0.16), r = S * 0.07;
+    ctx.beginPath(); ctx.ellipse(cx, cy, r * 2.2, r * 0.8, 0, 0, 7); ctx.ellipse(cx - r * 0.6, cy - r * 0.45, r, r * 0.8, 0, 0, 7); ctx.ellipse(cx + r * 0.6, cy - r * 0.6, r * 1.15, r, 0, 0, 7); ctx.fill(); }
+  if (g.raining) { ctx.strokeStyle = 'rgba(200,225,255,.75)'; ctx.lineWidth = 1.3; ctx.beginPath();
+    for (let i = 0; i < 140; i++) { const x = (i * 97.3 + g.t * 50) % Wd, y = -S + ((i * 53.7 + g.t * 600) % S); ctx.moveTo(x, y); ctx.lineTo(x - 2.5, y + 11); } ctx.stroke(); }
+  // grass
+  ctx.fillStyle = k > 0 ? '#9aa24a' : '#5aae3e'; ctx.fillRect(-Wd, -4, Wd * 3, 6);
+  ctx.strokeStyle = k > 0 ? '#a8ad55' : '#6cc04a'; ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.beginPath();
+  for (let x = 2; x < Wd; x += 5) { const h = 4 + ((x * 7.31) % 6); ctx.moveTo(x, -2); ctx.lineTo(x + Math.sin(x * 13.7 + g.t) * 1.5, -2 - h); } ctx.stroke();
+}
+function drawDepthRuler(g) {
+  ctx.fillStyle = 'rgba(20,12,6,.32)'; ctx.fillRect(0, 0, 24, g.D);
+  ctx.strokeStyle = 'rgba(255,240,215,.55)'; ctx.fillStyle = 'rgba(255,240,215,.75)'; ctx.font = font(10, 600); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1;
+  for (let cm = 0; cm <= CFG.soilCm; cm += 10) { const y = cm * g.pxPerCm; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cm % 50 ? 6 : 12, y); ctx.stroke(); if (cm % 50 === 0 && cm > 0) ctx.fillText(cm, 2, y - 7); }
+  if (!g.demo) { const y = g.main.tip.y; ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.moveTo(24, y); ctx.lineTo(31, y - 5); ctx.lineTo(31, y + 5); ctx.closePath(); ctx.fill(); }
+}
+function drawEarthworm(g, b) {
+  const i = Math.floor(b.worm * (b.pts.length - 1)); ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); for (let k = -5; k <= 5; k++) { const q = b.pts[clamp(i + k, 0, b.pts.length - 1)]; ctx.lineTo(q[0] + Math.sin(g.t * 5 + k) * 1.5, q[1]); } };
+  path(); ctx.strokeStyle = '#b8586a'; ctx.lineWidth = 7.5; ctx.stroke(); path(); ctx.strokeStyle = '#ef95a4'; ctx.lineWidth = 5.5; ctx.stroke();
+  const c = b.pts[clamp(i + 1, 0, b.pts.length - 1)]; ctx.fillStyle = '#d9707f'; ctx.fillRect(c[0] - 3, c[1] - 2, 6, 4); // clitellum
+}
+function drawRoots(g) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const widthOf = (r, i, n) => r.main ? 3.2 + 4 * (1 - i / Math.max(n, 1)) : r.kind === 'seek' ? 3 : r.order === 1 ? 1.9 : 1.3;
+  const strokeRoot = (r, extra, color, filter) => {
+    const pts = r.pts, n = pts.length; if (!n) return;
+    const chunk = r.main ? 20 : n;
+    for (let s = 0; s < n; s += chunk) {
+      const e = Math.min(n - 1, s + chunk); ctx.lineWidth = widthOf(r, s, n) + extra; ctx.strokeStyle = color; ctx.beginPath();
+      let pen = false;
+      for (let i = s; i <= e; i++) { const p = pts[i]; if (filter && !filter(p, pts[i + 1])) { pen = false; continue; } if (!pen) { ctx.moveTo(p.x, p.y); pen = true; } else ctx.lineTo(p.x, p.y); }
+      if (!filter && e === n - 1) ctx.lineTo(r.tip.x, r.tip.y);
+      ctx.stroke();
+    }
+  };
+  // lignin sheath under armored sections (reddish-brown bark)
+  const ligOn = p => p.lig && g.t >= p.lig;
+  for (const r of g.roots) strokeRoot(r, 5.5, '#8a3f14', ligOn);
+  for (const r of g.roots) strokeRoot(r, 2.4, '#6b4426');
+  for (const r of g.roots) strokeRoot(r, 0, '#f7e9c8');
+  for (const r of g.roots) if (r.main || r.kind === 'seek') { ctx.save(); ctx.globalAlpha = 0.55; strokeRoot(r, -widthOf(r, 0, 1) * 0.65, '#ffffff'); ctx.restore(); }
+  for (const r of g.roots) strokeRoot(r, 0.2, 'rgba(196,108,48,.55)', ligOn); // amber tint over armored bits
+  const aerOn = p => p.aer && g.t >= p.aer;   // air channels: dotted, see-through look
+  ctx.setLineDash([1.5, 3]); for (const r of g.roots) strokeRoot(r, -0.8, 'rgba(40,70,120,.75)', aerOn); ctx.setLineDash([]);
+  // colonised cells (arbuscules) and chewed bits
+  ctx.fillStyle = 'rgba(255,160,70,.95)';
+  for (const r of g.roots) for (let i = 0; i < r.pts.length; i += 3) { const n = r.pts[i]; if (n.col && !n.dead) { ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, 7); ctx.fill(); } }
+  ctx.fillStyle = '#5a1f12';
+  for (const r of g.roots) for (const n of r.pts) if (n.dead) { ctx.beginPath(); ctx.arc(n.x, n.y, widthOf(r, 0, 1) * 0.7 + 1.8, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(255,120,90,.5)'; ctx.lineWidth = 1; ctx.stroke(); }
+  if (g.buff.hair > 0) { ctx.strokeStyle = 'rgba(255,250,235,.55)'; ctx.lineWidth = 0.8; ctx.beginPath();
+    for (const r of g.roots) { const n = r.pts.length; for (let i = Math.max(0, n - 24); i < n; i++) { const p = r.pts[i]; for (let k = 0; k < 2; k++) { const a = i * 2.4 + k * 3.1; ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(a) * 7, p.y + Math.sin(a) * 7); } } }
+    ctx.stroke(); }
+  for (const r of g.roots) {
+    const t = r.tip;
+    if (r.main) {
+      const pulse = 1 + Math.sin(g.t * 6) * 0.15, gl = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, 24 * pulse);
+      gl.addColorStop(0, g.stun > 0 ? 'rgba(255,90,90,.7)' : 'rgba(255,248,200,.6)'); gl.addColorStop(1, 'rgba(255,248,200,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(t.x, t.y, 24 * pulse, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.a);
+      ctx.fillStyle = g.stun > 0 ? '#ffb0a8' : '#fff6dc'; ctx.strokeStyle = '#6b4426'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(-5, -4.2); ctx.quadraticCurveTo(9, -4.2, 9, 0); ctx.quadraticCurveTo(9, 4.2, -5, 4.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#2d1e14'; ctx.beginPath(); ctx.arc(3, -1.8, 1.1, 0, 7); ctx.arc(3, 1.8, 1.1, 0, 7); ctx.fill();
+      ctx.restore();
+    } else if (r.alive && r.kind === 'seek') { ctx.fillStyle = 'rgba(255,250,210,.35)'; ctx.beginPath(); ctx.arc(t.x, t.y, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#fff6dc'; ctx.beginPath(); ctx.arc(t.x, t.y, 2.8, 0, 7); ctx.fill(); }
+  }
+}
+function drawNema(n) {
+  ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(n.a); ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); for (let i = 0; i <= 12; i++) { const t = i / 12; ctx.lineTo(-24 + t * 27, Math.sin(n.ph - t * 6) * 3 * t); } };
+  path(); ctx.strokeStyle = 'rgba(90,76,66,.9)'; ctx.lineWidth = 6; ctx.stroke(); path(); ctx.strokeStyle = n.flee > 0 ? '#dfeadb' : '#f3e9dc'; ctx.lineWidth = 4; ctx.stroke();
+  ctx.fillStyle = '#e03030'; ctx.beginPath(); ctx.arc(1.5, -1.4, 1.1, 0, 7); ctx.arc(1.5, 1.4, 1.1, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#5a4c42'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, 0); ctx.lineTo(7, 0); ctx.stroke();
+  ctx.restore();
+}
+function drawRootworm(g, w) {
+  const K = 1.7 * Math.min(1, w.t * 3), segs = 11, tr = w.trail;   // grows in as it bursts out
+  const pulse = 0.5 + 0.5 * Math.sin(g.t * 6);
+  ctx.fillStyle = `rgba(255,70,50,${0.12 + pulse * 0.1})`; ctx.beginPath(); ctx.arc(w.x, w.y, 34 * K / 1.7 + pulse * 5, 0, 7); ctx.fill();
+  for (let i = segs - 1; i >= 0; i--) {
+    const p = tr[Math.min(tr.length - 1, i * 2)] || [w.x, w.y]; const r = (5.6 - i * 0.22) * K;
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.arc(p[0] + 1.5, p[1] + 2.5, r, 0, 7); ctx.fill();
+    ctx.fillStyle = i % 2 ? '#f6efdf' : '#e6d6b8'; ctx.strokeStyle = '#9c8466'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 7); ctx.fill(); ctx.stroke();
+  }
+  ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(w.a); ctx.scale(K, K);
+  ctx.fillStyle = '#6b3a16'; ctx.beginPath(); ctx.ellipse(3, 0, 5, 4.4, 0, 0, 7); ctx.fill();
+  const bite = Math.abs(Math.sin(w.ph * 2)) * 0.9; ctx.strokeStyle = '#2d1a0a'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(7, -2); ctx.lineTo(10.5, -0.3 - bite * 2); ctx.moveTo(7, 2); ctx.lineTo(10.5, 0.3 + bite * 2); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4.5, -1.8, 1.1, 0, 7); ctx.arc(4.5, 1.8, 1.1, 0, 7); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(4.9, -1.8, 0.5, 0, 7); ctx.arc(4.9, 1.8, 0.5, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = `rgba(255,80,60,${0.45 + pulse * 0.45})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(w.x, w.y, 26 * K / 1.7 + pulse * 5, 0, 7); ctx.stroke();
+}
+// maize plant; hpx = height in px; lim: -1 none, 0 water, 1 N, 2 P
+function drawPlant(c, x, hpx, b, lim, wilted, t) {
+  let L0 = '#5cbf5a', L1 = '#2e7d32';
+  if (lim === P_) { L0 = '#a77ad6'; L1 = '#5e3591'; } else if (lim === N_) { L0 = '#dcd766'; L1 = '#9c9830'; } else if (wilted || lim === W_) { L0 = '#9ab064'; L1 = '#5f7040'; }
+  const sway = Math.sin(t * 1.2) * 0.03 * (wilted ? 0.3 : 1), droop = wilted || lim === W_ ? 1.8 : 1;
+  c.save(); c.translate(x, 0); c.rotate(sway);
+  const sw = 1.5 + hpx * 0.028;
+  const sg = c.createLinearGradient(-sw, 0, sw, 0); sg.addColorStop(0, '#78c060'); sg.addColorStop(1, '#3d8a35');
+  c.fillStyle = sg; c.beginPath(); c.moveTo(-sw, 0); c.lineTo(-sw * 0.45, -hpx); c.lineTo(sw * 0.45, -hpx); c.lineTo(sw, 0); c.closePath(); c.fill();
+  const nl = Math.min(12, 2 + Math.floor(b / 6));
+  for (let i = 0; i < nl; i++) {
+    const fy = -hpx * (0.1 + 0.78 * i / nl), side = i % 2 ? 1 : -1, L = 7 + hpx * 0.5 * (1 - i / (nl * 1.8)), wd = 1.5 + L * 0.09;
+    const tipX = side * L, tipY = fy + L * 0.12 * droop * droop;
+    const lg = c.createLinearGradient(0, fy, tipX, tipY); lg.addColorStop(0, L1); lg.addColorStop(0.4, L0); lg.addColorStop(1, L1);
+    c.fillStyle = lg; c.beginPath(); c.moveTo(0, fy - wd * 0.5);
+    c.quadraticCurveTo(side * L * 0.5, fy - L * 0.42 / droop - wd, tipX, tipY);
+    c.quadraticCurveTo(side * L * 0.45, fy - L * 0.3 / droop + wd, 0, fy + wd); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(0, fy); c.quadraticCurveTo(side * L * 0.48, fy - L * 0.36 / droop, tipX, tipY); c.stroke();
+  }
+  if (b > 28) { const ey = -hpx * 0.42, e = hpx * 0.075 * Math.min(1, (b - 28) / 30) + 2;
+    c.fillStyle = '#f5cc3f'; c.beginPath(); c.ellipse(sw + e * 0.5, ey, e * 0.36, e, 0.35, 0, 7); c.fill();
+    c.fillStyle = '#7cc05a'; c.beginPath(); c.ellipse(sw + e * 0.3, ey + e * 0.3, e * 0.28, e * 0.9, 0.2, 0, 7); c.fill();
+    c.strokeStyle = '#a0662a'; c.lineWidth = 0.8; c.beginPath(); for (let k = 0; k < 4; k++) { c.moveTo(sw + e * 0.85, ey - e * 0.9); c.quadraticCurveTo(sw + e * 1.4, ey - e * 1.2, sw + e * (1.3 + k * 0.15), ey - e * (0.5 - k * 0.1)); } c.stroke(); }
+  if (b > 45) { const s = 2 + hpx * 0.07; c.strokeStyle = '#d9b44a'; c.lineWidth = 1.3; c.lineCap = 'round';
+    for (let i = -3; i <= 3; i++) { c.beginPath(); c.moveTo(0, -hpx); c.quadraticCurveTo(i * s * 0.5, -hpx - s * 1.4, i * s, -hpx - s * 0.7 + Math.abs(i) * s * 0.35); c.stroke(); } }
+  c.restore();
+}
+function drawHeightRuler(g, hpx) {
+  const x = g.plantX - 80, top = CFG.plantCmMax * g.plantPx;
+  ctx.strokeStyle = 'rgba(45,30,20,.35)'; ctx.fillStyle = 'rgba(45,30,20,.55)'; ctx.lineWidth = 1; ctx.font = font(10, 600); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, -top); ctx.stroke();
+  for (let cm = 0; cm <= CFG.plantCmMax; cm += 25) { const y = -cm * g.plantPx; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (cm % 50 ? 4 : 8), y); ctx.stroke(); if (cm % 50 === 0 && cm) ctx.fillText(cm, x - 4, y); }
+  if (g.demo) return;
+  const y = -Math.min(hpx, top), label = `${heightCm(g.biomass)} cm`;
+  ctx.strokeStyle = 'rgba(47,158,68,.6)'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x + 2, y); ctx.lineTo(g.plantX - 4, y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = font(15, 700); const w = ctx.measureText(label).width + 16;
+  ctx.fillStyle = '#2f9e44'; ctx.beginPath(); ctx.roundRect(x - w - 6, y - 11, w, 22, 11); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(label, x - 6 - w / 2, y + 1);
+}
+
+function pill(x, y, w, h, r = 14, fill = 'rgba(255,251,242,.93)') {
+  ctx.save(); ctx.shadowColor = 'rgba(40,25,10,.25)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); ctx.restore();
+}
+function drawHUD(g, v) {
+  const W = window.innerWidth - panelWidth();
+  const pad = 14, flash = Math.floor(g.t * 4) % 2 === 0;
+  ctx.textBaseline = 'middle';
+  // timer dial
+  const left = Math.max(0, g.dur - g.t), tcx = pad + 34, tcy = pad + 34;
+  ctx.save(); ctx.shadowColor = 'rgba(40,25,10,.25)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3; ctx.fillStyle = 'rgba(255,251,242,.95)'; ctx.beginPath(); ctx.arc(tcx, tcy, 32, 0, 7); ctx.fill(); ctx.restore();
+  ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = '#eadfcc'; ctx.beginPath(); ctx.arc(tcx, tcy, 25, 0, 7); ctx.stroke();
+  ctx.strokeStyle = left < 10 ? '#e04a3a' : '#2f9e44'; ctx.beginPath(); ctx.arc(tcx, tcy, 25, -Math.PI / 2, -Math.PI / 2 + 6.283 * left / g.dur); ctx.stroke();
+  ctx.fillStyle = left < 10 && flash ? '#e04a3a' : '#2d1e14'; ctx.font = font(20, 700); ctx.textAlign = 'center'; ctx.fillText(Math.ceil(left), tcx, tcy + 1);
+  // gauges
+  const bw = clamp(((W - 300) / 2 - 96) / 2, 120, 230);
+  const gauge = (x, spr, label, val, max, col, warn) => {
+    pill(x, pad + 8, bw, 52);
+    if (warn) { ctx.strokeStyle = flash ? '#e04a3a' : 'rgba(224,74,58,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, pad + 8, bw, 52, 14); ctx.stroke(); }
+    ctx.drawImage(spr, x + 4, pad + 14, 40, 40);
+    ctx.font = font(12, 600); ctx.textAlign = 'left'; ctx.fillStyle = '#7a5f45'; ctx.fillText(label, x + 46, pad + 24);
+    if (warn) { ctx.textAlign = 'right'; ctx.fillStyle = '#e04a3a'; ctx.fillText('NEED!', x + bw - 12, pad + 24); }
+    const bx = x + 46, bwid = bw - 58; ctx.fillStyle = '#ece1ce'; ctx.beginPath(); ctx.roundRect(bx, pad + 36, bwid, 12, 6); ctx.fill();
+    const f = clamp(val / max, 0, 1); if (f > 0.01) { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(bx, pad + 36, Math.max(12, bwid * f), 12, 6); ctx.fill(); }
+  };
+  const x0 = pad + 76;
+  gauge(x0, SPR.sugar, 'SUGAR', g.sugar, CFG.sugarMax, '#f2b705', g.sugar < 8);
+  gauge(x0 + bw + 8, SPR.water, 'WATER', g.pool[0], CFG.poolMax, '#2e8fe0', g.limiting === 0 || g.wilted);
+  gauge(W - pad - bw * 2 - 8, SPR.n, 'NITROGEN', g.pool[1], CFG.poolMax, '#2fb350', g.limiting === 1);
+  gauge(W - pad - bw, SPR.p, 'PHOSPHORUS', g.pool[2], CFG.poolMax, '#9b4fe0', g.limiting === 2);
+  // rootworm off screen: arrow at the edge pointing to it
+  if (g.worm && state === 'play') { const sx = v.ox + g.worm.x * v.s, sy = v.oy + g.worm.y * v.s;
+    if (sy < 0 || sy > H || sx < 0 || sx > W) { const ax = clamp(sx, 40, W - 40), ay = clamp(sy, 130, H - 60), ang = Math.atan2(sy - ay, sx - ax);
+      ctx.save(); ctx.translate(ax, ay); ctx.fillStyle = flash ? '#e0392b' : '#b02a1c'; ctx.beginPath(); ctx.arc(0, 0, 24, 0, 7); ctx.fill();
+      ctx.rotate(ang); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-4, -9); ctx.lineTo(-4, 9); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.font = font(12, 700); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#7a1a10'; ctx.strokeText('ROOTWORM', ax, ay + 36); ctx.fillText('ROOTWORM', ax, ay + 36); } }
+  // mini corn card once the plant has scrolled off the top
+  if (g.camY > -g.sky * 0.4 && state === 'play') {
+    const cw = 118, ch = 150, cx = pad, cy = pad + 104;
+    pill(cx, cy, cw, ch, 16);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(cx + 4, cy + 4, cw - 8, ch - 8, 12); ctx.clip();
+    const gy = cy + ch - 34, skg = ctx.createLinearGradient(0, cy, 0, gy); skg.addColorStop(0, g.drought ? '#ffbf73' : '#8fd0ff'); skg.addColorStop(1, g.drought ? '#fff0d2' : '#e3f5ff');
+    ctx.fillStyle = skg; ctx.fillRect(cx, cy, cw, gy - cy); ctx.fillStyle = '#4a3223'; ctx.fillRect(cx, gy, cw, ch);
+    ctx.save(); ctx.translate(0, gy); drawPlant(ctx, cx + cw / 2, Math.min(heightCm(g.biomass), CFG.plantCmMax) * (gy - cy - 8) / CFG.plantCmMax, g.biomass, g.limiting, g.wilted, g.t); ctx.restore();
+    ctx.restore();
+    ctx.fillStyle = '#2f9e44'; ctx.font = font(17, 700); ctx.textAlign = 'center'; ctx.fillText(`${heightCm(g.biomass)} cm`, cx + cw / 2, cy + ch - 16);
+  }
+  // status chips
+  let ix = x0, iy = pad + 68;
+  const chip = (spr, text, col, bg) => { ctx.font = font(13, 600); const tw = ctx.measureText(text).width + (spr ? 40 : 20); pill(ix, iy, tw, 28, 14, bg); if (spr) ctx.drawImage(spr, ix + 3, iy + 1, 26, 26); ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(text, ix + (spr ? 31 : 10), iy + 15); ix += tw + 6; };
+  if (g.worm) chip(SPR.rootworm, 'ROOTWORM! Press 2 for armor', '#fff', flash ? '#d63a2a' : '#b02a1c');
+  if (g.fungi.length) chip(SPR.spore, `${g.fungi.length} fungus friend${g.fungi.length > 1 ? 's' : ''} · -${(g.fungi.length * CFG.fungusDrain).toFixed(1)} sugar/s`, '#b0630a');
+  if (g.buff.auxin > 0) chip(SPR.auxin, `Auxin ${Math.ceil(g.buff.auxin)}s`, '#b87400');
+  if (g.combo >= 3) chip(null, `COMBO x${g.combo}`, '#b87400');
+  // toast: placed away from the root tip
+  if (g.toasts.length) {
+    const tt = g.toasts[0], a = Math.min(1, tt.t * 5, (tt.dur - tt.t) * 3), sc = 1 + Math.max(0, 0.2 - tt.t) * 1.2;
+    const tipSy = v.oy + g.main.tip.y * v.s, ty = tipSy < H * 0.5 ? H - 110 : 150;
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, ty); ctx.scale(sc, sc);
+    ctx.font = font(Math.min(34, W / 30), 700); const w1 = ctx.measureText(tt.title).width; ctx.font = font(Math.min(18, W / 55), 500); const w2 = ctx.measureText(tt.sub).width;
+    const bw2 = Math.max(w1, w2) + 48; pill(-bw2 / 2, -38, bw2, 78, 22, 'rgba(255,251,242,.97)');
+    ctx.fillStyle = tt.color; ctx.beginPath(); ctx.roundRect(-bw2 / 2, -38, 8, 78, [22, 0, 0, 22]); ctx.fill();
+    ctx.textAlign = 'center'; ctx.font = font(Math.min(34, W / 30), 700); ctx.fillStyle = tt.color; ctx.fillText(tt.title, 0, -12);
+    ctx.font = font(Math.min(18, W / 55), 500); ctx.fillStyle = '#2d1e14'; ctx.fillText(tt.sub, 0, 20);
+    ctx.restore();
+  }
+  if (state === 'end') {
+    ctx.font = font(Math.min(40, W / 26), 700); const txt = 'TIME! Look at the roots you grew!', w = ctx.measureText(txt).width + 60;
+    pill(W / 2 - w / 2, 16, w, 64, 32, 'rgba(47,158,68,.96)'); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(txt, W / 2, 49);
+  }
+  // controls
+  ctx.font = font(13, 500); const hint = 'Mouse: steer  ·  Click: side root  ·  Keys 1-4: root superpowers  ·  M: sound  ·  F: fullscreen' + (muted ? '  ·  MUTED' : '');
+  const hw = ctx.measureText(hint).width + 28; ctx.fillStyle = 'rgba(20,12,6,.5)'; ctx.beginPath(); ctx.roundRect(W / 2 - hw / 2, H - 34, hw, 24, 12); ctx.fill();
+  ctx.fillStyle = 'rgba(255,245,225,.85)'; ctx.textAlign = 'center'; ctx.fillText(hint, W / 2, H - 21);
+}
+
+
+// =====================================================================================
+// SIDE PANEL: "inside your root" cross-section avatar + trait buttons
+// =====================================================================================
+let xsCache = { key: '', c: null };
+function crossSection(g, R) {
+  const aerFrac = g.liveNodes ? g.aerNodes / g.liveNodes : 0;
+  const aerW = g.aerUses ? Math.max(4, Math.round(12 * Math.min(1, aerFrac * 1.2))) : 0;
+  const lig = g.armorUses > 0, hair = g.buff.hair > 0, amf = g.fungi.length > 0, dead = g.chewed > 0;
+  const exu = g.buff.exu > 0, key = [R, aerW, lig, hair, amf, dead, exu, DPR].join();
+  if (xsCache.key === key) return xsCache.c;
+  const S = Math.ceil(R * 2 * DPR), c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d'); x.scale(DPR, DPR); x.translate(R, R);
+  const Rb = R * 0.8, Rs = Rb * 0.34, ring = (Rb - Rs) / 7.5;
+  // microscope field
+  const bg = x.createRadialGradient(0, 0, 0, 0, 0, R); bg.addColorStop(0, '#101a44'); bg.addColorStop(1, '#050817');
+  x.fillStyle = bg; x.beginPath(); x.arc(0, 0, R, 0, 7); x.fill();
+  // root hairs
+  if (hair) {
+    x.strokeStyle = 'rgba(160,220,170,.9)'; x.lineWidth = 1.2; x.lineCap = 'round';
+    for (let i = 0; i < 40; i++) {
+      const a = i / 40 * 6.283, l = R * (0.1 + ((i * 37) % 9) / 100);
+      x.beginPath(); x.moveTo(Math.cos(a) * Rb, Math.sin(a) * Rb);
+      x.quadraticCurveTo(Math.cos(a + 0.05) * (Rb + l * 0.6), Math.sin(a + 0.05) * (Rb + l * 0.6), Math.cos(a + 0.02) * (Rb + l), Math.sin(a + 0.02) * (Rb + l)); x.stroke();
+    }
+  }
+  if (exu) { const eg = x.createRadialGradient(0, 0, Rb * 0.95, 0, 0, R); eg.addColorStop(0, 'rgba(95,224,216,.75)'); eg.addColorStop(1, 'rgba(95,224,216,0)'); x.fillStyle = eg; x.beginPath(); x.arc(0, 0, R, 0, 7); x.fill(); }
+  x.fillStyle = '#0c1640'; x.beginPath(); x.arc(0, 0, Rb, 0, 7); x.fill();
+  const wedge = a => { if (!aerW) return false; const k = 6.283 / aerW, d = ((a % k) + k) % k; return d < k * 0.42; };
+  // cortex cells
+  for (let i = 0; i < 7; i++) {
+    const r = Rs + ring * (i + 0.9), n = Math.floor(6.283 * r / (ring * 1.02)), outer = i >= 5, mid = i >= 1 && i <= 4;
+    for (let k = 0; k < n; k++) {
+      const a = k / n * 6.283 + (i % 2) * 0.5 / n * 6.283;
+      if (mid && wedge(a)) continue;
+      const cr = ring * (outer ? 0.44 : 0.48), cx = Math.cos(a) * r, cy = Math.sin(a) * r;
+      x.beginPath(); x.arc(cx, cy, cr, 0, 7);
+      if (outer && lig) { x.fillStyle = 'rgba(255,140,50,.35)'; x.fill(); x.strokeStyle = '#ffa24a'; x.lineWidth = 2; }
+      else { x.fillStyle = 'rgba(120,170,255,.08)'; x.fill(); x.strokeStyle = 'rgba(140,190,255,.85)'; x.lineWidth = 1; }
+      x.stroke();
+      if (amf && i >= 2 && i <= 4 && (k * 7 + i * 3) % 5 === 0) { // arbuscules inside cortex cells
+        x.strokeStyle = '#ffb347'; x.lineWidth = 0.9;
+        for (let b = 0; b < 4; b++) { const ba = b * 1.6 + k; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(ba) * cr * 0.7, cy + Math.sin(ba) * cr * 0.7); x.stroke(); }
+      }
+    }
+  }
+  // aerenchyma lacunae
+  if (aerW) {
+    const k = 6.283 / aerW;
+    for (let j = 0; j < aerW; j++) {
+      const a0 = j * k + 0.04, a1 = a0 + k * 0.42 - 0.08, r0 = Rs + ring * 1.4, r1 = Rs + ring * 4.9;
+      x.beginPath(); x.arc(0, 0, r1, a0, a1); x.arc(0, 0, r0, a1, a0, true); x.closePath();
+      x.fillStyle = '#02030b'; x.fill(); x.strokeStyle = 'rgba(140,190,255,.7)'; x.lineWidth = 1.2; x.stroke();
+    }
+  }
+  // fungal hyphae entering the cortex
+  if (amf) {
+    x.strokeStyle = 'rgba(255,179,71,.9)'; x.lineWidth = 1.1;
+    for (let h = 0; h < 5; h++) {
+      let a = h * 1.25 + 0.3, r = Rb * 1.02; x.beginPath(); x.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      for (let s = 0; s < 6; s++) { a += 0.12 * Math.sin(h + s); r -= ring * 0.7; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      x.stroke();
+    }
+  }
+  // epidermis
+  const ne = Math.floor(6.283 * Rb / (ring * 0.6)); x.strokeStyle = lig ? '#ffc07a' : 'rgba(170,210,255,.95)'; x.lineWidth = 1.2;
+  for (let k = 0; k < ne; k++) { const a = k / ne * 6.283; x.beginPath(); x.arc(Math.cos(a) * Rb * 0.985, Math.sin(a) * Rb * 0.985, ring * 0.28, 0, 7); x.stroke(); }
+  // endodermis, xylem vessels, pith
+  x.strokeStyle = '#cfe2ff'; x.lineWidth = 2; x.beginPath(); x.arc(0, 0, Rs, 0, 7); x.stroke();
+  x.fillStyle = 'rgba(120,170,255,.12)'; x.beginPath(); x.arc(0, 0, Rs, 0, 7); x.fill();
+  for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; x.beginPath(); x.arc(Math.cos(a) * Rs * 0.72, Math.sin(a) * Rs * 0.72, Rs * 0.13, 0, 7); x.strokeStyle = '#e6f0ff'; x.lineWidth = 1.6; x.stroke(); }
+  x.strokeStyle = 'rgba(140,190,255,.6)'; x.lineWidth = 0.8;
+  for (let k = 0; k < 18; k++) { const a = k / 18 * 6.283, r = Rs * (k % 2 ? 0.25 : 0.45); x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, Rs * 0.09, 0, 7); x.stroke(); }
+  if (dead) { x.fillStyle = 'rgba(40,20,8,.85)'; x.beginPath(); x.arc(Rb * 0.62, -Rb * 0.55, Rb * 0.26, 0, 7); x.fill(); } // chewed notch
+  xsCache = { key, c }; return c;
+}
+function drawPanel(g) {
+  const pw = panelWidth(), px = W - pw;
+  ctx.save();
+  ctx.fillStyle = '#fbf4e6'; ctx.fillRect(px, 0, pw, H);
+  const edge = ctx.createLinearGradient(px - 12, 0, px, 0); edge.addColorStop(0, 'rgba(0,0,0,0)'); edge.addColorStop(1, 'rgba(0,0,0,.35)');
+  ctx.fillStyle = edge; ctx.fillRect(px - 12, 0, 12, H);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  let y = 24;
+  ctx.fillStyle = '#7a5f45'; ctx.font = font(12, 600); ctx.fillText('I N S I D E   Y O U R   R O O T', px + pw / 2, y); y += 12;
+  const R = Math.min((pw - 36) / 2, H * 0.13);
+  ctx.drawImage(crossSection(g, R), px + pw / 2 - R, y, R * 2, R * 2);
+  ctx.font = font(10.5, 500); ctx.fillStyle = '#7a5f45';
+  ctx.fillText('what a slice looks like under the microscope', px + pw / 2, y + R * 2 + 10); y += R * 2 + 30;
+  // sugar budget
+  if (!g.demo) {
+    ctx.font = font(12, 600); ctx.fillStyle = '#7a5f45'; ctx.fillText('S U G A R   P E R   S E C O N D', px + pw / 2, y); y += 20;
+    ctx.font = font(16, 700); ctx.fillStyle = '#2f9e44'; ctx.fillText(`+${g.income.toFixed(1)}  made by leaves`, px + pw / 2, y); y += 20;
+    if (g.aerSave > 0.05) { ctx.fillStyle = '#2566b8'; ctx.fillText(`+${g.aerSave.toFixed(1)}  saved by air channels`, px + pw / 2, y); y += 20; }
+    ctx.fillStyle = '#c0392b'; ctx.fillText(`−${g.spend.toFixed(1)}  used by roots`, px + pw / 2, y); y += 16;
+  } else y += 56;
+  // trait buttons
+  g.btns = []; const bh = H < 820 ? 50 : 56, bx = px + 12, bwid = pw - 24; y += 8;
+  const flash = Math.floor(g.t * 4) % 2 === 0;
+  for (const T of TRAITS) {
+    const afford = g.sugar >= T.cost();
+    const built = (T.id === 'aer' && g.aerUses) || (T.id === 'lig' && g.armorUses);
+    const urgent = !g.demo && ((T.id === 'lig' && g.worm) || (T.id === 'aer' && g.upkeep > 2.5 && g.aerNodes < g.liveNodes * 0.5) ||
+      (T.id === 'exu' && g.buff.exu <= 0 && g.nems.some(n => Math.hypot(n.x - g.main.tip.x, n.y - g.main.tip.y) < 170)));
+    ctx.save(); ctx.globalAlpha = afford ? 1 : 0.45;
+    ctx.shadowColor = 'rgba(40,25,10,.2)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(bx, y, bwid, bh, 14); ctx.fill(); ctx.shadowColor = 'transparent';
+    if (urgent) { ctx.strokeStyle = flash ? T.col : 'rgba(0,0,0,.1)'; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.fillStyle = T.col; ctx.beginPath(); ctx.roundRect(bx + 8, y + 10, 34, 36, 9); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = font(22, 700); ctx.textAlign = 'center'; ctx.fillText(T.key, bx + 25, y + 29);
+    ctx.drawImage(SPR[T.spr], bx + 46, y + 11, 34, 34);
+    ctx.textAlign = 'left'; ctx.fillStyle = T.col; ctx.font = font(15, 700); ctx.fillText(T.name, bx + 84, y + 17);
+    ctx.fillStyle = '#7a5f45'; ctx.font = font(11, 500); ctx.fillText(T.sub, bx + 84, y + 32);
+    const extra = g.buff[T.id] > 0 ? ` · ${Math.ceil(g.buff[T.id])}s left` : built ? ' · built' : '';
+    ctx.fillStyle = '#b87400'; ctx.font = font(11, 600); ctx.fillText(`${T.cost()} sugar${extra}`, bx + 84, y + 46);
+    ctx.restore();
+    g.btns.push({ x: bx, y, w: bwid, h: bh, id: T.id }); y += bh + 8;
+  }
+  y += 6; ctx.textAlign = 'center'; ctx.font = font(11.5, 500); ctx.fillStyle = '#7a5f45';
+  for (const t of ['Traits go on the older parts of your root.', 'Build them again as it grows!']) { if (y < H - 12) ctx.fillText(t, px + pw / 2, y); y += 15; }
+  ctx.restore();
+}
+
+// =====================================================================================
+// LOOP
+// =====================================================================================
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (G && state !== 'end') update(dt);
+  if (G && state === 'end') G.reveal = Math.min(1, G.reveal + dt / 1.2);
+  if (G && state === 'end' && performance.now() - endAt > 90000) toTitle(); // kiosk: idle end screen resets
+  if (G) render();
+  requestAnimationFrame(frame);
+}
+function init() {
+  resize(); buildSprites();
+  document.getElementById('imgAer').src = '__AER__';
+  drawBoards(); buildRootButtons(); G = newGame(true);
+  const testHero = QS.get('hero') || 'standard';
+  if (QS.has('ff')) { beginPlay(testHero); const n = +QS.get('ff') * 60; for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); }
+  if (QS.has('endtest')) { beginPlay(testHero); for (let i = 0; i < CFG.roundSeconds * 60 + 5 && state === 'play'; i++) update(1 / 60);
+    console.log('SCORE', heightCm(G.biomass), G.heroId, JSON.stringify({ got: G.got, fungi: G.fungi.length, lim: G.limitT.map(v => v.toFixed(1)), chewed: G.chewed, armor: G.armorUses, depth: Math.round(G.maxDepth / G.pxPerCm), sugar: G.sugar.toFixed(0), roots: G.roots.length })); }
+  requestAnimationFrame(frame);
+}
+(document.fonts && document.fonts.load ? document.fonts.load(font(20, 700)) : Promise.resolve()).catch(() => {}).then(init);
+</script>
