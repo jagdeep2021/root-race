@@ -18,6 +18,7 @@ You steer a corn root through the soil to collect water, nitrogen and phosphorus
 | **Key 2** Lignin armor: the rootworm can't chew it, and it pushes through hardpan | Multiseriate cortical sclerenchyma (MCS) |
 | **Key 3** Root hairs: grab food from farther away | Root hairs |
 | **Key 4** Exudates from the root tip scare nematodes away | Root exudates |
+| **Key 5** Crown roots grow from the stem into the topsoil to find P | Shoot-borne (crown/nodal) roots, topsoil foraging |
 | Roots can't grow up; worm tunnels are fast lanes; hardpan slows you | Gravitropism, biopores, soil compaction |
 | After a round, replay as Deep Diver, Topsoil Forager, Fungus Friend or Iron Root | Root ideotypes suit different soils |
 
@@ -25,7 +26,11 @@ The side panel shows a live root cross-section that changes as traits are built.
 
 ## Controls
 
-Mouse to steer · click for a side root · keys 1–4 for root traits · M for sound · F for fullscreen. Arrow keys also steer.
+Mouse to steer · click for a side root · keys 1–5 for root traits · M for sound · F for fullscreen. Arrow keys also steer.
+
+**Phones and tablets:** drag to steer, quick tap for a side root, buttons along the bottom for the traits. Scan the QR code on the title screen (print copy: `RootRace_QR.png` in the showcase folder).
+
+**Kiosk mode:** when nobody is playing, the title card alternates with a silent demo round and a zoom-out of the demo's root system. Any click or key starts a game.
 
 ## Running it
 

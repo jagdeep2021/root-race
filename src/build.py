@@ -9,7 +9,8 @@ root = pathlib.Path(__file__).resolve().parent.parent
 src = (root / "src/game.html").read_text()
 b64 = lambda p: base64.b64encode((root / "src/assets" / p).read_bytes()).decode()
 body = (src.replace("__AER__", "data:image/jpeg;base64," + b64("aerenchyma_crosssection.jpg"))
-           .replace("__FONT__", "data:font/woff2;base64," + b64("fredoka.woff2")))
+           .replace("__FONT__", "data:font/woff2;base64," + b64("fredoka.woff2"))
+           .replace("__QR__", "data:image/png;base64," + b64("qr.png")))
 head = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
 page = head + body + "\n</html>\n"
 (root / "index.html").write_text(page)

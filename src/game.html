@@ -4,7 +4,7 @@
 :root { color-scheme: light; --ink:#2d1e14; --ink2:#7a5f45; --paper:#fffaf0; --tile:#f4e9d5; --green:#2f9e44; --water:#1f86d6; --n:#23a043; --p:#8e44d0; --fun:#e07b12; }
 html, body { margin:0; height:100%; background:#241810; overflow:hidden; }
 body { font-family: Fredoka, ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif; color:var(--ink); user-select:none; -webkit-user-select:none; }
-canvas#game { position:fixed; inset:0; width:100vw; height:100vh; display:block; cursor:crosshair; }
+canvas#game { position:fixed; inset:0; width:100vw; height:100vh; display:block; cursor:crosshair; touch-action:none; }
 .overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; background:rgba(28,18,10,.40); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
 .card { background:var(--paper); border-radius:28px; padding:24px 30px 26px; max-width:1080px; width:100%; box-sizing:border-box; max-height:calc(100vh - 32px); overflow:auto;
   box-shadow:0 24px 70px rgba(0,0,0,.45), inset 0 -6px 0 #eadcc2; }
@@ -47,6 +47,8 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
 .btn { font-family:inherit; font-weight:600; font-size:19px; padding:9px 22px; border-radius:999px; border:none; cursor:pointer; background:#ffc93c; color:#3a2210; box-shadow:0 5px 0 #b88a12; }
 .btn.green { background:var(--green); color:#fff; box-shadow:0 5px 0 #1f6b2e; }
 .btn:focus-visible, .start:focus-visible { outline:3px solid #1f86d6; outline-offset:3px; }
+#demoBar { position:fixed; left:calc((100vw - 290px) / 2); transform:translateX(-50%); bottom:56px; background:var(--green); color:#fff; font-weight:700; font-size:clamp(22px,3vw,36px);
+  padding:12px 34px; border-radius:999px; box-shadow:0 8px 0 #1f6b2e, 0 16px 40px rgba(0,0,0,.4); animation:pulse 1.3s ease-in-out infinite; pointer-events:none; white-space:nowrap; }
 .hidden { display:none !important; }
 .card.title { max-width:800px; }
 .againAs { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
@@ -60,27 +62,33 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
 .step canvas { width:64px; height:64px; }
 .step b { font-size:18px; font-weight:600; } .step span { color:var(--ink2); font-size:14px; }
 .keys { display:flex; gap:6px; height:64px; align-items:center; }
-.keys i { font-style:normal; font-weight:700; font-size:21px; background:#fff; border:2px solid #dccbac; border-bottom-width:5px; border-radius:10px; width:34px; height:40px; display:grid; place-items:center; }
+.keys i { font-style:normal; font-weight:700; font-size:19px; background:#fff; border:2px solid #dccbac; border-bottom-width:5px; border-radius:10px; width:30px; height:38px; display:grid; place-items:center; }
 .titleFoot { display:grid; grid-template-columns:1fr 1.3fr; gap:18px; margin-top:22px; align-items:start; }
 .titleFoot .science { margin-top:0; }
+.titleFoot { grid-template-columns:1fr 1fr 1.3fr; }
+.qr { display:flex; gap:10px; align-items:center; background:#fff; border-radius:16px; padding:8px; font-size:13px; line-height:1.3; }
+.qr img { width:92px; height:92px; image-rendering:pixelated; flex:none; } .qr b { display:block; font-size:15px; color:var(--green); }
+@media (max-width:760px) { .qr { display:none; } .titleFoot { grid-template-columns:1fr; } .step canvas { width:48px; height:48px; } }
 @media (max-width:700px) { .how, .titleFoot { grid-template-columns:1fr; } }
 .small { font-size:13px; color:var(--ink2); text-align:center; margin-top:12px; }
 </style>
 
 <canvas id="game"></canvas>
+<div id="demoBar" class="hidden">Click anywhere to play!</div>
 
 <div id="title" class="overlay">
   <div class="card title">
     <h1 class="logo">ROOT <span>RACE</span></h1>
     <div class="tag">You are a corn root. Find food in the soil and grow the <b>tallest corn</b>!</div>
     <div class="how">
-      <div class="step"><canvas data-icon="mouse"></canvas><b>Move the mouse</b><span>to steer your root</span></div>
+      <div class="step"><canvas data-icon="mouse"></canvas><b>Move the mouse</b><span>to steer your root (on a phone: drag)</span></div>
       <div class="step"><canvas data-icon="click"></canvas><b>Click</b><span>to grow a side root</span></div>
-      <div class="step"><div class="keys"><i>1</i><i>2</i><i>3</i><i>4</i></div><b>Keys 1 2 3 4</b><span>root superpowers</span></div>
+      <div class="step"><div class="keys"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i></div><b>Keys 1 to 5</b><span>root superpowers</span></div>
     </div>
     <button class="start" id="startBtn">Click or press SPACE to play</button>
     <div class="titleFoot">
       <div class="board"><h3>Tallest corn today</h3><ol id="boardTitle"></ol></div>
+      <div class="qr"><img id="imgQR" alt="QR code for the game website"><div><b>Play on your phone</b>Scan to play at home, or share with a friend!</div></div>
       <div class="science"><img id="imgAer" alt="Corn root cross-section with air channels"><div>A real corn root from our lab, glowing under the microscope. The dark holes are <b>air channels</b>, one of your superpowers!</div></div>
     </div>
   </div>
@@ -125,6 +133,7 @@ const CFG = {
   autoGap: [26, 46], seekGap: [22, 36],                // spacing of automatic laterals
   seekCost: 8, autoCost: 1, growCost: 0.045,
   aerCost: 5, armorCost: 20, hairCost: 10, exuCost: 8, // root traits on keys 1-4
+  crownCost: 12, crownLen: 230,                        // key 5: crown roots from the stem base into the topsoil
   exuTime: 8, exuR: 75,                                // exudates: seconds active, max spread of each puff (px)
   maintPerNode: 0.003, aerMaint: 0.3,                  // sugar/s to keep each 5 px of root alive; aerenchyma cuts it to 30%
   incomeBase: 4.5, incomePerBio: 0.1,
@@ -133,7 +142,7 @@ const CFG = {
   density: [150, 95, 125],   // water, N, P particles per 1M px² of soil
   respawn: [3.2, 2.0, 1.2], // per second per 1M px²
   rainAt: 16, wormAt: 26, droughtAt: 38, wormLife: 20,
-  spores: 8, nematodes: 5, powerups: 4, rocksPerMpx: 11,
+  spores: 8, nematodes: 5, nemPerMpx: 3, nemWave: [8, 12, 16], powerups: 4, rocksPerMpx: 11,
   soilCm: 150, plantCmMax: 260,
 };
 const W_ = 0, N_ = 1, P_ = 2;
@@ -164,7 +173,7 @@ function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  if (state === 'title' && G) G = newGame(true);
+  if (state === 'title' && G) toCard();
 }
 window.addEventListener('resize', () => resize());
 
@@ -278,6 +287,10 @@ function sprMouse(x, s, click) {
 function sprExu(x, s) { badge(x, s, '#3fc9c1', '#0f7a74'); const c = s / 2; x.fillStyle = 'rgba(255,255,255,.9)';
   for (const [dx, dy, r] of [[-.12, .06, .1], [.02, -.04, .13], [.14, .08, .09], [0, .14, .07]]) { x.beginPath(); x.arc(c + dx * s, c + dy * s, r * s, 0, 7); x.fill(); }
   x.fillStyle = '#0f7a74'; for (const [dx, dy] of [[-.12, .05], [.03, -.05], [.14, .07]]) { x.beginPath(); x.arc(c + dx * s, c + dy * s, .025 * s, 0, 7); x.fill(); } }
+function sprCrown(x, s) { badge(x, s, '#c9b24a', '#7a6a12'); const c = s / 2; x.lineCap = 'round';
+  x.strokeStyle = '#4f8a2e'; x.lineWidth = s * .08; x.beginPath(); x.moveTo(c, s * .2); x.lineTo(c, s * .5); x.stroke();
+  x.strokeStyle = '#fff3d6'; x.lineWidth = s * .05; for (const d of [-1, 1]) for (const k of [0.25, 0.55]) { x.beginPath(); x.moveTo(c, s * .5); x.quadraticCurveTo(c + d * s * .2, s * (.52 + k * .1), c + d * s * (.18 + k * .25), s * (.6 + k * .3)); x.stroke(); }
+  x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = s * .02; x.beginPath(); x.moveTo(s * .16, s * .5); x.lineTo(s * .84, s * .5); x.stroke(); }
 let SPR = {}, TSPR = [];
 function buildSprites() {
   SPR = {
@@ -285,7 +298,7 @@ function buildSprites() {
     n: mk(64, (x, s) => sprOrb(x, s, '#c6ffd2', '#44cc62', '#16803a', 'N')),
     p: mk(64, (x, s) => sprOrb(x, s, '#f0dcff', '#b172ee', '#6a28a8', 'P')),
     spore: mk(96, sprSpore), hair: mk(64, sprHair), air: mk(64, sprAir), auxin: mk(64, sprAuxin), armor: mk(64, sprArmor),
-    nema: mk(64, sprNema), worm: mk(64, sprTunnel), rock: mk(64, sprRock), rootworm: mk(64, sprRootworm), sugar: mk(64, sprSugar), exu: mk(64, sprExu), mouse: mk(96, (x, s) => sprMouse(x, s, false)), click: mk(96, (x, s) => sprMouse(x, s, true)),
+    nema: mk(64, sprNema), worm: mk(64, sprTunnel), rock: mk(64, sprRock), rootworm: mk(64, sprRootworm), sugar: mk(64, sprSugar), exu: mk(64, sprExu), crown: mk(64, sprCrown), mouse: mk(96, (x, s) => sprMouse(x, s, false)), click: mk(96, (x, s) => sprMouse(x, s, true)),
   };
   TSPR = [SPR.water, SPR.n, SPR.p];
   document.querySelectorAll('canvas[data-icon]').forEach(c => { c.width = c.height = 128; const x = c.getContext('2d'); x.clearRect(0, 0, 128, 128); x.drawImage(SPR[c.dataset.icon], 0, 0, 128, 128); });
@@ -296,6 +309,8 @@ function buildSprites() {
 // =====================================================================================
 let G = null;
 let state = 'title';
+// attract loop while nobody plays: title card -> silent demo round -> zoom-out -> title card
+let attract = { phase: 'card', t: 0 };
 
 function newGame(demo, heroId = 'standard') {
   const sky = clamp(Math.round(H * 0.24), 140, 230);
@@ -345,7 +360,8 @@ function newGame(demo, heroId = 'standard') {
   for (let i = 0; i < CFG.spores; i++) g.spores.push({ x: rand(30, worldW - 30), y: i < 3 ? rand(40, D * 0.35) : rand(40, D * 0.6), ph: rand(0, 6) });
   g.spores[0].x = clamp(g.plantX + (Math.random() < 0.5 ? -1 : 1) * rand(50, 110), 30, worldW - 30); g.spores[0].y = rand(45, 90);
   for (let i = 0; i < CFG.powerups; i++) spawnPower(g);
-  for (let i = 0; i < CFG.nematodes; i++) g.nems.push({ x: rand(30, worldW - 30), y: rand(D * 0.3, D - 30), a: rand(0, 6), ph: rand(0, 6), cd: 0, flee: 0 });
+  for (let i = 0; i < Math.max(CFG.nematodes, Math.round(CFG.nemPerMpx * g.area)); i++) g.nems.push({ x: rand(30, worldW - 30), y: rand(D * 0.2, D - 30), a: rand(0, 6), ph: rand(0, 6), cd: 0, flee: 0 });
+  g.nextWave = CFG.nemWave[0];
 
   g.main = newRoot(g, g.plantX, 3, Math.PI / 2, true);
   if (g.mod.autoAer) g.aerUses = 1;
@@ -477,7 +493,8 @@ function renderSoil(g) {
 // INPUT
 // =====================================================================================
 const keys = {}; const mouse = { x: 0, y: 0, active: false }; let lastKeyT = -1e9, inputLock = 0;
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+window.addEventListener('mousemove', e => { if (state === 'title' && attract.phase !== 'card' && Math.hypot(e.movementX, e.movementY) > 2) toCard(); mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+window.addEventListener('mousedown', () => { if (state === 'title' && attract.phase !== 'card') { audio(); startPlay(); } });
 window.addEventListener('keydown', e => {
   audio();
   const k = e.key.toLowerCase();
@@ -497,9 +514,21 @@ window.addEventListener('keydown', e => {
   if (k.startsWith('arrow')) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+let touch = null;
+const btnAt = (x, y) => G && G.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+const press = id => id === 'branch' ? branch() : trait(id);
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return; e.preventDefault(); audio();
+  if (state === 'title') { startPlay(); return; }
+  if (state !== 'play') return;
+  const b = btnAt(e.clientX, e.clientY); if (b) { press(b.id); return; }
+  touch = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 }; mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+});
+cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || !touch) return; touch.moved += Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y); mouse.x = e.clientX; mouse.y = e.clientY; });
+cv.addEventListener('pointerup', e => { if (e.pointerType === 'mouse' || !touch) return; if (touch.moved < 12 && performance.now() - touch.t < 250 && state === 'play') branch(); touch = null; });
 cv.addEventListener('mousedown', e => { audio(); if (state !== 'play' || e.button !== 0) return;
   const b = G.btns.find(b => e.clientX >= b.x && e.clientX <= b.x + b.w && e.clientY >= b.y && e.clientY <= b.y + b.h);
-  if (b) trait(b.id); else if (e.clientX < W - panelWidth()) branch(); });
+  if (b) press(b.id); else if (e.clientX < W - panelWidth()) branch(); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 document.getElementById('title').addEventListener('mousedown', () => { audio(); if (state === 'title') startPlay(); });
 document.getElementById('againBtn').addEventListener('click', () => { if (endReady()) toTitle(); });
@@ -511,7 +540,7 @@ function toggleFS() { try { if (!document.fullscreenElement) document.documentEl
 // =====================================================================================
 let endAt = 0, savedIdx = -1;
 function endReady() { return performance.now() - endAt > 3500; }
-function startPlay() { beginPlay('standard'); }
+function startPlay() { document.getElementById('demoBar').classList.add('hidden'); beginPlay('standard'); }
 function buildRootButtons() { // "try again as" row on the end screen
   const box = document.getElementById('againAs'); box.innerHTML = '';
   HERO_IDS.forEach(id => {
@@ -534,8 +563,22 @@ function beginPlay(heroId) {
   toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
   setTimeout(() => { if (G && !G.demo && G.t < 15) toast('CLICK for a seeker root', 'It hunts for food on its own (8 sugar)', '#b0630a', 3.5); }, 5500);
 }
+function toCard() {
+  attract = { phase: 'card', t: 0 }; G = newGame(true);
+  document.getElementById('title').classList.remove('hidden'); document.getElementById('demoBar').classList.add('hidden');
+}
+function toDemo() {
+  attract = { phase: 'demo', t: 0 }; G = newGame(true); G.attract = true;
+  document.getElementById('title').classList.add('hidden'); document.getElementById('demoBar').classList.remove('hidden');
+}
+function attractTick(dt) {
+  attract.t += dt;
+  if (attract.phase === 'card' && attract.t > 12) toDemo();
+  else if (attract.phase === 'demo' && G.t >= G.dur) attract = { phase: 'reveal', t: 0 };
+  else if (attract.phase === 'reveal') { G.reveal = Math.min(1, G.reveal + dt / 1.2); if (attract.t > 5) toCard(); }
+}
 function toTitle() {
-  state = 'title'; G = newGame(true);
+  state = 'title'; toCard();
   document.getElementById('end').classList.add('hidden');
   document.getElementById('title').classList.remove('hidden');
   drawBoards();
@@ -610,8 +653,10 @@ function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 // =====================================================================================
 // MESSAGES / FX
 // =====================================================================================
+// phones have no number keys: 'Press 4 ...' becomes 'Tap Exudates ...'
+const forDevice = txt => compact() ? txt.replace(/[Pp]ress ([1-5])( for| to)?/g, (m, d) => 'Tap ' + TRAITS[d - 1].name.toUpperCase() + ' ') : txt;
 function toast(title, sub, color = '#2d1e14', dur = 3, urgent = false) {
-  if (!G || G.demo) return; const m = { title, sub, color, dur, t: 0 };
+  if (!G || (G.demo && !G.attract)) return; const m = { title, sub: forDevice(sub), color, dur, t: 0 };
   if (urgent) G.toasts = [m]; else if (G.toasts.length < 3) G.toasts.push(m);
 }
 function once(key, title, sub, color, dur) { if (G.seen[key]) return; G.seen[key] = 1; toast(title, sub, color, dur); }
@@ -638,11 +683,21 @@ function autoLateral(g, r) {
 }
 // Root traits, built with keys 1-3. Aerenchyma and lignin (MCS) go onto the mature root sections that exist now.
 const TRAITS = [
-  { key: '1', id: 'aer', name: 'Air channels', sub: 'Less energy lost = more sugar', cost: () => CFG.aerCost, col: '#2566b8', spr: 'air' },
+  { key: '1', id: 'aer', name: 'Air channels', sub: 'Less energy lost: more sugar', cost: () => CFG.aerCost, col: '#2566b8', spr: 'air' },
   { key: '2', id: 'lig', name: 'Lignin armor', sub: 'Worm-proof, beats hardpan', cost: () => CFG.armorCost, col: '#8a3f14', spr: 'armor' },
   { key: '3', id: 'hair', name: 'Root hairs', sub: 'Reach food farther, 15 s', cost: () => CFG.hairCost, col: '#2f8a3c', spr: 'hair' },
   { key: '4', id: 'exu', name: 'Exudates', sub: 'Chemicals nematodes hate', cost: () => CFG.exuCost, col: '#138a8a', spr: 'exu' },
+  { key: '5', id: 'crown', name: 'Crown roots', sub: 'Stem roots for topsoil P', cost: () => CFG.crownCost, col: '#7a6a12', spr: 'crown' },
 ];
+// when a trait's button should flash (shared by the side panel and the phone bar)
+function urgentTrait(g, id) {
+  const m = g.main.tip;
+  if (id === 'lig') return !!g.worm && !g.mod.autoLig;
+  if (id === 'aer') return g.upkeep > 2.5 && g.aerNodes < g.liveNodes * 0.5;
+  if (id === 'exu') return g.buff.exu <= 0 && g.nems.some(n => Math.hypot(n.x - m.x, n.y - m.y) < 170);
+  if (id === 'crown') return g.limiting === P_ && m.y > g.D * 0.3;
+  return false;
+}
 function trait(id) {
   const g = G; if (!g || inputLock > 0 || g.traitCD[id] > 0) return;
   const T = TRAITS.find(t => t.id === id), m = g.main.tip;
@@ -650,6 +705,10 @@ function trait(id) {
   if (id === 'hair') {
     g.buff.hair = 15 * g.mod.hairTime; g.hairUses++;
     if (!g.demo) toast('ROOT HAIRS!', 'Tiny hairs grab food from farther away (15 s)', '#2f8a3c', 3);
+  } else if (id === 'crown') { // crown (nodal) roots: shoot-borne roots from the stem base, shallow, hunting P
+    for (const side of [-1, 1, Math.random() < 0.5 ? -1 : 1]) { const r = newRoot(g, g.plantX + side * 4, 4, Math.PI / 2 - side * rand(0.9, 1.25), false, 'seek', CFG.crownLen); r.crown = true; }
+    g.crownUses = (g.crownUses || 0) + 1; burst(g.plantX, 4, '#e8d9a0', 16, 70);
+    if (!g.demo) once('crown', 'CROWN ROOTS!', 'Corn grows new roots from its stem. They spread through the topsoil, where the P is!', '#7a6a12', 4);
   } else if (id === 'exu') {
     g.buff.exu = CFG.exuTime; g.exuUses = (g.exuUses || 0) + 1;
     for (let i = 0; i < 18; i++) burst(m.x, m.y, '#5fe0d8', 1, 90);
@@ -678,7 +737,7 @@ function update(dt) {
   const g = G; g.t += dt; inputLock = Math.max(0, inputLock - dt);
   g.branchCD -= dt; for (const k in g.traitCD) g.traitCD[k] -= dt; for (const k in g.buff) g.buff[k] = Math.max(0, g.buff[k] - dt);
   g.stun = Math.max(0, g.stun - dt); g.shake = Math.max(0, g.shake - dt * 3);
-  if (!g.demo) events(g, dt); else if (g.t > 75) { G = newGame(true); return; }
+  if (!g.demo || g.attract) events(g, dt); else if (g.t > 75) { G = newGame(true); return; }
 
   // steer the main tip
   const m = g.main; let want = null;
@@ -719,6 +778,7 @@ function update(dt) {
   if (!g.demo) {
     if (g.wilted) once('wilt', 'Your plant is WILTING!', 'No water means no sugar from the leaves. Find water!', '#1f86d6', 3.5);
     if (g.limiting === P_ && g.limitT[P_] > 4 && g.t > 10) once('limP', 'Need more PHOSPHORUS!', 'Leaves turn purple without P. Find a fungus friend!', '#8e44d0', 4);
+    if (g.limiting === P_ && g.limitT[P_] > 6 && m.tip.y > g.D * 0.3) once('crownTip', 'Low on P down here?', 'Press 5 for CROWN ROOTS: new roots from the stem into the topsoil', '#7a6a12', 4.5);
     if (g.limiting === N_ && g.limitT[N_] > 4 && g.t > 10) once('limN', 'Need more NITROGEN!', 'Leaves turn yellow without N', '#23a043', 3.5);
   }
 
@@ -762,7 +822,7 @@ function growRoot(g, r, dt) {
   let spd = r.main ? CFG.tipSpeed * g.mod.speed : r.kind === 'seek' ? CFG.seekSpeed : CFG.autoSpeed * (r.order === 1 ? 1 : 0.75);
   if (r.main) { if (g.stun > 0) spd = 0; if (g.buff.auxin > 0) spd *= 1.7; }
   else if (r.kind === 'seek') {
-    if (!r.target || r.target.fly || !g.parts.includes(r.target) || g.t - (r.tT || 0) > 0.6) { r.target = nearestPart(g, r.tip.x, r.tip.y, 120); r.tT = g.t; }
+    if (!r.target || r.target.fly || !g.parts.includes(r.target) || g.t - (r.tT || 0) > 0.6) { r.target = (r.crown && nearestPart(g, r.tip.x, r.tip.y, 170, P_)) || nearestPart(g, r.tip.x, r.tip.y, 120); r.tT = g.t; }
     const want = r.target ? Math.atan2(r.target.y - r.tip.y, r.target.x - r.tip.x) : lerpAngle(r.tip.a, Math.PI / 2, 0.2);
     r.tip.a = downAngle(r.tip.a + clamp(angDiff(r.tip.a, want), -2.4 * dt, 2.4 * dt));
   } else r.tip.a = downAngle(lerpAngle(r.tip.a, Math.PI / 2, 0.25 * dt) + Math.sin(g.t * 2 + r.born * 7) * 0.4 * dt);
@@ -804,9 +864,9 @@ function nearBurrow(g, x, y) {
     const i = clamp(Math.round((y - p0[1]) / 8), 0, b.pts.length - 1); if (Math.abs(b.pts[i][0] - x) < 10) return true; }
   return false;
 }
-function nearestPart(g, x, y, R) {
+function nearestPart(g, x, y, R, type = -1) {
   let best = null, bd = R * R;
-  for (const p of g.parts) { if (p.fly || p.y < y - 6) continue; const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = p; } }
+  for (const p of g.parts) { if (p.fly || p.y < y - 6 || (type >= 0 && p.t !== type)) continue; const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = p; } }
   return best;
 }
 function nearestNode(g, x, y, R, filter) {
@@ -830,6 +890,7 @@ function aiSteer(g, dt) {
     if (g.liveNodes > 120 && g.aerNodes < g.liveNodes * 0.6 && g.sugar > 30) trait('aer');
     if (g.sugar > 60 && g.buff.hair <= 0 && Math.random() < 0.3) trait('hair');
     if (g.buff.exu <= 0 && g.sugar > 15 && g.nems.some(n => Math.hypot(n.x - m.tip.x, n.y - m.tip.y) < 150)) trait('exu');
+    if (urgentTrait(g, 'crown') && g.sugar > 30 && Math.random() < 0.3) trait('crown');
   }
   const T = g.aiTarget;
   if (T && (T.wander || g.parts.includes(T) || g.spores.includes(T))) { if (T.wander && Math.hypot(T.x - m.tip.x, T.y - m.tip.y) < 15) g.aiTarget = null; return Math.atan2(T.y - m.tip.y, T.x - m.tip.x); }
@@ -956,9 +1017,9 @@ function wormUpdate(g, dt) {
 }
 // Teach each thing the first time the root gets near it: a label pinned to the object
 function scanCallouts(g) {
-  if (g.demo || g.callouts.length >= 2) return;
+  if ((g.demo && !g.attract) || g.callouts.length >= 2) return;
   const m = g.main.tip, near = (o, R = 190) => Math.hypot(o.x - m.x, o.y - m.y) < R && o.y > m.y - 80;
-  const add = (key, obj, text, col) => { if (g.seen['c_' + key] || !obj) return false; g.seen['c_' + key] = 1; g.callouts.push({ obj, text, col, t: 0 }); return true; };
+  const add = (key, obj, text, col) => { if (g.seen['c_' + key] || !obj) return false; g.seen['c_' + key] = 1; g.callouts.push({ obj, text: forDevice(text), col, t: 0 }); return true; };
   if (g.worm && add('rootworm', g.worm, 'Rootworm! Press 2', '#c0392b')) return;
   for (const [t, key, text, col] of [[W_, 'w', 'Water: grab it!', '#1f86d6'], [N_, 'n', 'Nitrogen (N): grab it!', '#23a043'], [P_, 'p', 'Phosphorus (P): it never moves!', '#8e44d0']])
     if (!g.seen['c_' + key]) { const p = g.parts.find(p => p.t === t && !p.fly && near(p)); if (p && add(key, p, text, col)) return; }
@@ -980,8 +1041,17 @@ function drawCallouts(g) {
     ctx.restore();
   }
 }
+function nemWave(g) { // 2-3 nematodes wriggle out of the soil near the root and give chase
+  const m = g.main.tip, n = 2 + (Math.random() < 0.5 ? 1 : 0);
+  for (let i = 0; i < n && g.nems.length < CFG.nemWave[2]; i++) {
+    const a = rand(0.2, Math.PI - 0.2) + (i - 1) * 0.5, x = clamp(m.x + Math.cos(a) * 210, 20, g.worldW - 20), y = clamp(m.y + Math.sin(a) * 170, 60, g.D - 20);
+    g.nems.push({ x, y, a: Math.atan2(m.y - y, m.x - x), ph: rand(0, 6), cd: 0, flee: 0 }); burst(x, y, '#efe6da', 8, 50);
+  }
+  toast('NEMATODES INCOMING!', 'Press 4 to release EXUDATES from your root tip', '#138a8a', 3, true);
+}
 function events(g, dt) {
   const t = g.t;
+  if (t >= g.nextWave && t < g.dur - 4) { g.nextWave += CFG.nemWave[1]; nemWave(g); }
   if (!g.rainDone && t >= CFG.rainAt) {
     g.rainDone = true; g.raining = true; g.rain = 7; SFX.event();
     toast('RAINSTORM!', 'Rain washes nitrogen DEEPER. Chase it down!', '#2566b8', 4, true);
@@ -1006,7 +1076,9 @@ function events(g, dt) {
 // =====================================================================================
 // RENDER
 // =====================================================================================
-function panelWidth() { return clamp(Math.round(W * 0.18), 220, 290); }
+const compact = () => W < 760;                     // phones: no side panel, touch bar along the bottom
+const BAR = 78;
+function panelWidth() { return compact() ? 0 : clamp(Math.round(W * 0.18), 220, 290); }
 function view(g) {
   // play: world width fills the play area, camera scrolls; end (reveal 0 -> 1): zoom out to the whole soil profile
   const aw = W - panelWidth(), vh = g.sky + g.D + 12, k = g.reveal * g.reveal * (3 - 2 * g.reveal);
@@ -1065,7 +1137,7 @@ function render() {
   }
   ctx.restore();
   drawPanel(g);
-  if (!g.demo) drawHUD(g, v);
+  if (!g.demo || g.attract) drawHUD(g, v);
 }
 
 function drawSky(g) {
@@ -1107,7 +1179,7 @@ function drawEarthworm(g, b) {
 }
 function drawRoots(g) {
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const widthOf = (r, i, n) => r.main ? 3.2 + 4 * (1 - i / Math.max(n, 1)) : r.kind === 'seek' ? 3 : r.order === 1 ? 1.9 : 1.3;
+  const widthOf = (r, i, n) => r.main ? 3.2 + 4 * (1 - i / Math.max(n, 1)) : r.crown ? 4.2 : r.kind === 'seek' ? 3 : r.order === 1 ? 1.9 : 1.3;
   const strokeRoot = (r, extra, color, filter) => {
     const pts = r.pts, n = pts.length; if (!n) return;
     const chunk = r.main ? 20 : n;
@@ -1231,7 +1303,7 @@ function drawHUD(g, v) {
   ctx.strokeStyle = left < 10 ? '#e04a3a' : '#2f9e44'; ctx.beginPath(); ctx.arc(tcx, tcy, 25, -Math.PI / 2, -Math.PI / 2 + 6.283 * left / g.dur); ctx.stroke();
   ctx.fillStyle = left < 10 && flash ? '#e04a3a' : '#2d1e14'; ctx.font = font(20, 700); ctx.textAlign = 'center'; ctx.fillText(Math.ceil(left), tcx, tcy + 1);
   // gauges
-  const bw = clamp(((W - 300) / 2 - 96) / 2, 120, 230);
+  const C = compact(), bw = C ? (W - 70 - pad - 3 * 6) / 4 : clamp(((W - 300) / 2 - 96) / 2, 120, 230);
   const gauge = (x, spr, label, val, max, col, warn) => {
     pill(x, pad + 8, bw, 52);
     if (warn) { ctx.strokeStyle = flash ? '#e04a3a' : 'rgba(224,74,58,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, pad + 8, bw, 52, 14); ctx.stroke(); }
@@ -1242,10 +1314,18 @@ function drawHUD(g, v) {
     const f = clamp(val / max, 0, 1); if (f > 0.01) { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(bx, pad + 36, Math.max(12, bwid * f), 12, 6); ctx.fill(); }
   };
   const x0 = pad + 76;
+  if (C) { const mini = (i, spr, val, max, col, warn) => { const x = 70 + i * (bw + 6), y = pad + 8;
+      pill(x, y, bw, 40, 12); if (warn) { ctx.strokeStyle = flash ? '#e04a3a' : 'rgba(224,74,58,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, y, bw, 40, 12); ctx.stroke(); }
+      ctx.drawImage(spr, x + 2, y + 4, 32, 32); const bx = x + 34, bwid = bw - 40; ctx.fillStyle = '#ece1ce'; ctx.beginPath(); ctx.roundRect(bx, y + 15, bwid, 10, 5); ctx.fill();
+      const f = clamp(val / max, 0, 1); if (f > 0.01) { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(bx, y + 15, Math.max(10, bwid * f), 10, 5); ctx.fill(); } };
+    mini(0, SPR.sugar, g.sugar, CFG.sugarMax, '#f2b705', g.sugar < 8); mini(1, SPR.water, g.pool[0], CFG.poolMax, '#2e8fe0', g.limiting === 0 || g.wilted);
+    mini(2, SPR.n, g.pool[1], CFG.poolMax, '#2fb350', g.limiting === 1); mini(3, SPR.p, g.pool[2], CFG.poolMax, '#9b4fe0', g.limiting === 2);
+  } else {
   gauge(x0, SPR.sugar, 'SUGAR', g.sugar, CFG.sugarMax, '#f2b705', g.sugar < 8);
   gauge(x0 + bw + 8, SPR.water, 'WATER', g.pool[0], CFG.poolMax, '#2e8fe0', g.limiting === 0 || g.wilted);
   gauge(W - pad - bw * 2 - 8, SPR.n, 'NITROGEN', g.pool[1], CFG.poolMax, '#2fb350', g.limiting === 1);
   gauge(W - pad - bw, SPR.p, 'PHOSPHORUS', g.pool[2], CFG.poolMax, '#9b4fe0', g.limiting === 2);
+  }
   // rootworm off screen: arrow at the edge pointing to it
   if (g.worm && state === 'play') { const sx = v.ox + g.worm.x * v.s, sy = v.oy + g.worm.y * v.s;
     if (sy < 0 || sy > H || sx < 0 || sx > W) { const ax = clamp(sx, 40, W - 40), ay = clamp(sy, 130, H - 60), ang = Math.atan2(sy - ay, sx - ax);
@@ -1254,7 +1334,7 @@ function drawHUD(g, v) {
       ctx.font = font(12, 700); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#7a1a10'; ctx.strokeText('ROOTWORM', ax, ay + 36); ctx.fillText('ROOTWORM', ax, ay + 36); } }
   // mini corn card once the plant has scrolled off the top
   if (g.camY > -g.sky * 0.4 && state === 'play') {
-    const cw = 118, ch = 150, cx = pad, cy = pad + 104;
+    const cw = C ? 74 : 118, ch = C ? 96 : 150, cx = pad, cy = pad + (C ? 96 : 104);
     pill(cx, cy, cw, ch, 16);
     ctx.save(); ctx.beginPath(); ctx.roundRect(cx + 4, cy + 4, cw - 8, ch - 8, 12); ctx.clip();
     const gy = cy + ch - 34, skg = ctx.createLinearGradient(0, cy, 0, gy); skg.addColorStop(0, g.drought ? '#ffbf73' : '#8fd0ff'); skg.addColorStop(1, g.drought ? '#fff0d2' : '#e3f5ff');
@@ -1264,7 +1344,7 @@ function drawHUD(g, v) {
     ctx.fillStyle = '#2f9e44'; ctx.font = font(17, 700); ctx.textAlign = 'center'; ctx.fillText(`${heightCm(g.biomass)} cm`, cx + cw / 2, cy + ch - 16);
   }
   // status chips
-  let ix = x0, iy = pad + 68;
+  let ix = C ? pad + 84 : x0, iy = pad + (C ? 58 : 68);
   const chip = (spr, text, col, bg) => { ctx.font = font(13, 600); const tw = ctx.measureText(text).width + (spr ? 40 : 20); pill(ix, iy, tw, 28, 14, bg); if (spr) ctx.drawImage(spr, ix + 3, iy + 1, 26, 26); ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(text, ix + (spr ? 31 : 10), iy + 15); ix += tw + 6; };
   if (g.worm) chip(SPR.rootworm, 'ROOTWORM! Press 2 for armor', '#fff', flash ? '#d63a2a' : '#b02a1c');
   if (g.fungi.length) chip(SPR.spore, `${g.fungi.length} fungus friend${g.fungi.length > 1 ? 's' : ''} · -${(g.fungi.length * CFG.fungusDrain).toFixed(1)} sugar/s`, '#b0630a');
@@ -1273,7 +1353,7 @@ function drawHUD(g, v) {
   // toast: placed away from the root tip
   if (g.toasts.length) {
     const tt = g.toasts[0], a = Math.min(1, tt.t * 5, (tt.dur - tt.t) * 3), sc = 1 + Math.max(0, 0.2 - tt.t) * 1.2;
-    const tipSy = v.oy + g.main.tip.y * v.s, ty = tipSy < H * 0.5 ? H - 110 : 150;
+    const tipSy = v.oy + g.main.tip.y * v.s, ty = tipSy < H * 0.5 ? H - (C ? BAR + 60 : 110) : (C ? 170 : 150);
     ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, ty); ctx.scale(sc, sc);
     ctx.font = font(Math.min(34, W / 30), 700); const w1 = ctx.measureText(tt.title).width; ctx.font = font(Math.min(18, W / 55), 500); const w2 = ctx.measureText(tt.sub).width;
     const bw2 = Math.max(w1, w2) + 48; pill(-bw2 / 2, -38, bw2, 78, 22, 'rgba(255,251,242,.97)');
@@ -1287,7 +1367,8 @@ function drawHUD(g, v) {
     pill(W / 2 - w / 2, 16, w, 64, 32, 'rgba(47,158,68,.96)'); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(txt, W / 2, 49);
   }
   // controls
-  ctx.font = font(13, 500); const hint = 'Mouse: steer  ·  Click: side root  ·  Keys 1-4: root superpowers  ·  M: sound  ·  F: fullscreen' + (muted ? '  ·  MUTED' : '');
+  if (C) return;
+  ctx.font = font(13, 500); const hint = 'Mouse: steer  ·  Click: side root  ·  Keys 1-5: root superpowers  ·  M: sound  ·  F: fullscreen' + (muted ? '  ·  MUTED' : '');
   const hw = ctx.measureText(hint).width + 28; ctx.fillStyle = 'rgba(20,12,6,.5)'; ctx.beginPath(); ctx.roundRect(W / 2 - hw / 2, H - 34, hw, 24, 12); ctx.fill();
   ctx.fillStyle = 'rgba(255,245,225,.85)'; ctx.textAlign = 'center'; ctx.fillText(hint, W / 2, H - 21);
 }
@@ -1368,7 +1449,25 @@ function crossSection(g, R) {
   if (dead) { x.fillStyle = 'rgba(40,20,8,.85)'; x.beginPath(); x.arc(Rb * 0.62, -Rb * 0.55, Rb * 0.26, 0, 7); x.fill(); } // chewed notch
   xsCache = { key, c }; return c;
 }
+function drawTouchBar(g) {
+  const y0 = H - BAR, items = [{ id: 'branch', key: '+', name: 'Side root', col: '#6b4426', spr: null, cost: () => CFG.seekCost }, ...TRAITS];
+  ctx.save(); ctx.fillStyle = 'rgba(251,244,230,.96)'; ctx.fillRect(0, y0, W, BAR);
+  g.btns = []; const gap = 6, bw = (W - gap * (items.length + 1)) / items.length, flash = Math.floor(g.t * 4) % 2 === 0;
+  items.forEach((T, i) => {
+    const x = gap + i * (bw + gap), y = y0 + 8, h = BAR - 16, afford = g.sugar >= T.cost();
+    const urgent = urgentTrait(g, T.id);
+    ctx.globalAlpha = afford ? 1 : 0.45; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(x, y, bw, h, 12); ctx.fill();
+    if (urgent) { ctx.strokeStyle = flash ? T.col : 'rgba(0,0,0,.1)'; ctx.lineWidth = 3; ctx.stroke(); }
+    if (T.spr) ctx.drawImage(SPR[T.spr], x + bw / 2 - 16, y + 3, 32, 32);
+    else { ctx.fillStyle = T.col; ctx.font = font(26, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', x + bw / 2, y + 19); }
+    ctx.fillStyle = T.col; ctx.font = font(10.5, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(g.buff[T.id] > 0 ? `${Math.ceil(g.buff[T.id])}s` : T.name, x + bw / 2, y + h - 11);
+    ctx.globalAlpha = 1; g.btns.push({ x, y, w: bw, h, id: T.id });
+  });
+  ctx.restore();
+}
 function drawPanel(g) {
+  if (compact()) { if (!g.demo || g.attract) drawTouchBar(g); return; }
   const pw = panelWidth(), px = W - pw;
   ctx.save();
   ctx.fillStyle = '#fbf4e6'; ctx.fillRect(px, 0, pw, H);
@@ -1389,26 +1488,25 @@ function drawPanel(g) {
     ctx.fillStyle = '#c0392b'; ctx.fillText(`−${g.spend.toFixed(1)}  used by roots`, px + pw / 2, y); y += 16;
   } else y += 56;
   // trait buttons
-  g.btns = []; const bh = H < 820 ? 50 : 56, bx = px + 12, bwid = pw - 24; y += 8;
+  g.btns = []; const bh = H < 820 ? 46 : 52, bx = px + 12, bwid = pw - 24; y += 6;
   const flash = Math.floor(g.t * 4) % 2 === 0;
   for (const T of TRAITS) {
     const afford = g.sugar >= T.cost();
     const built = (T.id === 'aer' && g.aerUses) || (T.id === 'lig' && g.armorUses);
-    const urgent = !g.demo && ((T.id === 'lig' && g.worm) || (T.id === 'aer' && g.upkeep > 2.5 && g.aerNodes < g.liveNodes * 0.5) ||
-      (T.id === 'exu' && g.buff.exu <= 0 && g.nems.some(n => Math.hypot(n.x - g.main.tip.x, n.y - g.main.tip.y) < 170)));
+    const urgent = (!g.demo || g.attract) && urgentTrait(g, T.id);
     ctx.save(); ctx.globalAlpha = afford ? 1 : 0.45;
     ctx.shadowColor = 'rgba(40,25,10,.2)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(bx, y, bwid, bh, 14); ctx.fill(); ctx.shadowColor = 'transparent';
     if (urgent) { ctx.strokeStyle = flash ? T.col : 'rgba(0,0,0,.1)'; ctx.lineWidth = 3; ctx.stroke(); }
-    ctx.fillStyle = T.col; ctx.beginPath(); ctx.roundRect(bx + 8, y + 10, 34, 36, 9); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = font(22, 700); ctx.textAlign = 'center'; ctx.fillText(T.key, bx + 25, y + 29);
-    ctx.drawImage(SPR[T.spr], bx + 46, y + 11, 34, 34);
-    ctx.textAlign = 'left'; ctx.fillStyle = T.col; ctx.font = font(15, 700); ctx.fillText(T.name, bx + 84, y + 17);
-    ctx.fillStyle = '#7a5f45'; ctx.font = font(11, 500); ctx.fillText(T.sub, bx + 84, y + 32);
+    const kh = bh - 16; ctx.fillStyle = T.col; ctx.beginPath(); ctx.roundRect(bx + 8, y + 8, 30, kh, 9); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = font(20, 700); ctx.textAlign = 'center'; ctx.fillText(T.key, bx + 23, y + bh / 2 + 1);
+    ctx.drawImage(SPR[T.spr], bx + 42, y + bh / 2 - 16, 32, 32);
+    ctx.textAlign = 'left'; ctx.fillStyle = T.col; ctx.font = font(14.5, 700); ctx.fillText(T.name, bx + 80, y + bh * 0.28);
+    ctx.fillStyle = '#7a5f45'; ctx.font = font(10.5, 500); let sub = T.sub; while (sub.length > 8 && ctx.measureText(sub).width > bwid - 88) sub = sub.slice(0, -2) + '…'; ctx.fillText(sub, bx + 80, y + bh * 0.55);
     const extra = g.buff[T.id] > 0 ? ` · ${Math.ceil(g.buff[T.id])}s left` : built ? ' · built' : '';
-    ctx.fillStyle = '#b87400'; ctx.font = font(11, 600); ctx.fillText(`${T.cost()} sugar${extra}`, bx + 84, y + 46);
+    ctx.fillStyle = '#b87400'; ctx.font = font(10.5, 600); ctx.fillText(`${T.cost()} sugar${extra}`, bx + 80, y + bh * 0.8);
     ctx.restore();
-    g.btns.push({ x: bx, y, w: bwid, h: bh, id: T.id }); y += bh + 8;
+    g.btns.push({ x: bx, y, w: bwid, h: bh, id: T.id }); y += bh + 6;
   }
   y += 6; ctx.textAlign = 'center'; ctx.font = font(11.5, 500); ctx.fillStyle = '#7a5f45';
   for (const t of ['Traits go on the older parts of your root.', 'Build them again as it grows!']) { if (y < H - 12) ctx.fillText(t, px + pw / 2, y); y += 15; }
@@ -1421,15 +1519,16 @@ function drawPanel(g) {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (G && state !== 'end') update(dt);
+  if (G && state === 'title') attractTick(dt);
+  if (G && state !== 'end' && !(state === 'title' && attract.phase === 'reveal')) update(dt);
   if (G && state === 'end') G.reveal = Math.min(1, G.reveal + dt / 1.2);
-  if (G && state === 'end' && performance.now() - endAt > 90000) toTitle(); // kiosk: idle end screen resets
+  if (G && state === 'end' && performance.now() - endAt > 45000) toTitle(); // kiosk: idle end screen resets
   if (G) render();
   requestAnimationFrame(frame);
 }
 function init() {
   resize(); buildSprites();
-  document.getElementById('imgAer').src = '__AER__';
+  document.getElementById('imgAer').src = '__AER__'; document.getElementById('imgQR').src = '__QR__';
   drawBoards(); buildRootButtons(); G = newGame(true);
   const testHero = QS.get('hero') || 'standard';
   if (QS.has('ff')) { beginPlay(testHero); const n = +QS.get('ff') * 60; for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); }
