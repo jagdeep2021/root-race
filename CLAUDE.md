@@ -29,6 +29,7 @@ The AI scores roughly 90–200 cm; one run in ~10 fails low (AI noise).
 - **Title screen does one job** (press Play). Teaching happens in play: first-encounter labels pinned to objects (`scanCallouts`), event banners, the trait panel.
 - **No root choice before the first play.** It broke the flow. Root types (ideotypes) are offered only on the end screen ("try again as").
 - **Air channels read as sugar gained** ("+X saved by air channels" plus gold sparkles), not only as a lower cost.
+- **QR code is always on screen** (bottom of the side panel, desktop) so onlookers can scan it.
 - **Kiosk attract loop** while idle: title card 12 s → silent AI demo round with HUD/events → 5 s zoom-out → card. Mouse movement returns to the card; any click starts.
 - **Phones:** `compact()` (< 760 px) drops the side panel for a bottom touch bar; drag steers, quick tap = side root. Prompts say "Tap X" instead of "Press N" (`forDevice`).
 - **Nematodes must be met:** ~3 per Mpx of soil plus waves near the tip (first at 8 s, every 12 s, cap 16) so exudates (key 4) get used.

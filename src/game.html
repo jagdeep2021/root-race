@@ -937,7 +937,7 @@ function absorb(g, dt) {
 function credit(g, p) {
   g.got[p.t]++; g.pool[p.t] = Math.min(CFG.poolMax, g.pool[p.t] + 1);
   g.combo++; g.comboT = 1.3; g.bestCombo = Math.max(g.bestCombo, g.combo);
-  if (g.combo >= 5 && g.combo % 5 === 0) { const bonus = Math.min(6, 2 + g.combo / 10) | 0; floatText(p.x, p.y - 10, `COMBO x${g.combo}! +${bonus} sugar`, '#ffcf4a', 17); g.sugar = Math.min(CFG.sugarMax, g.sugar + bonus); }
+  if (g.combo >= 5 && g.combo % 5 === 0) { const bonus = Math.min(6, 2 + g.combo / 10) | 0; if (g.combo % 25 === 0) floatText(p.x, p.y - 10, `COMBO x${g.combo}! +${bonus} sugar`, '#ffcf4a', 17); g.sugar = Math.min(CFG.sugarMax, g.sugar + bonus); }
   SFX.pick(p.t, g.combo); burst(p.x, p.y, TCOL[p.t], 4, 36);
   if (!g.demo) {
     if (p.t === P_) once('firstP', 'PHOSPHORUS!', 'P doesn\'t move in soil. You have to go get it', '#8e44d0', 3);
@@ -1378,6 +1378,7 @@ function drawHUD(g, v) {
 // SIDE PANEL: "inside your root" cross-section avatar + trait buttons
 // =====================================================================================
 let xsCache = { key: '', c: null };
+const QRIMG = new Image(); QRIMG.src = '__QR__';
 function crossSection(g, R) {
   const aerFrac = g.liveNodes ? g.aerNodes / g.liveNodes : 0;
   const aerW = g.aerUses ? Math.max(4, Math.round(12 * Math.min(1, aerFrac * 1.2))) : 0;
@@ -1510,6 +1511,14 @@ function drawPanel(g) {
   }
   y += 6; ctx.textAlign = 'center'; ctx.font = font(11.5, 500); ctx.fillStyle = '#7a5f45';
   for (const t of ['Traits go on the older parts of your root.', 'Build them again as it grows!']) { if (y < H - 12) ctx.fillText(t, px + pw / 2, y); y += 15; }
+  // QR code always on screen, for people watching or waiting in line
+  const room = H - y - 14, q = Math.min(150, room - 34, pw - 60);
+  if (q >= 80 && QRIMG.complete) {
+    const bx2 = px + 12, bw2 = pw - 24, by = H - 14 - (q + 34);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(bx2, by, bw2, q + 34, 14); ctx.fill();
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(QRIMG, px + pw / 2 - q / 2, by + 6, q, q); ctx.imageSmoothingEnabled = true;
+    ctx.fillStyle = '#2f9e44'; ctx.font = font(14, 700); ctx.textAlign = 'center'; ctx.fillText('Scan to play on your phone!', px + pw / 2, by + q + 20);
+  }
   ctx.restore();
 }
 
@@ -1528,7 +1537,7 @@ function frame(now) {
 }
 function init() {
   resize(); buildSprites();
-  document.getElementById('imgAer').src = '__AER__'; document.getElementById('imgQR').src = '__QR__';
+  document.getElementById('imgAer').src = '__AER__'; document.getElementById('imgQR').src = QRIMG.src;
   drawBoards(); buildRootButtons(); G = newGame(true);
   const testHero = QS.get('hero') || 'standard';
   if (QS.has('ff')) { beginPlay(testHero); const n = +QS.get('ff') * 60; for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); }
