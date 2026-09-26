@@ -13,7 +13,7 @@ Its own public repo, nested in ~/lab-code and ignored by the parent SidhuLab rep
 | `src/build.py` | inlines assets, writes `index.html` (optional extra path = offline copy) |
 | `index.html` | built, single file, what Pages serves. Never edit by hand |
 
-Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/RootRace.html"`
+Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/RootRace/RootRace.html"`
 
 ## Test hooks (URL params)
 - `?endtest=1&auto=1` plays a full round with the AI and logs `SCORE <cm> <root> {...}` to the console
