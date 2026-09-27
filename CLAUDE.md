@@ -13,7 +13,15 @@ Its own public repo, nested in ~/lab-code and ignored by the parent SidhuLab rep
 | `src/build.py` | inlines assets, writes `index.html` (optional extra path = offline copy) |
 | `index.html` | built, single file, what Pages serves. Never edit by hand |
 
-Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/RootRace/RootRace.html"`
+Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/RootRace/RootRace.html"` (then keep a numbered `RootRace_VN.html` beside it)
+
+Edit `src/game.html` only, then build. Never hand-edit the OneDrive copy: on Sep 26 edits made there (V2–V4) had to be synced back by hand.
+
+## Play counter
+- Every game started is logged in the browser's `localStorage` under `rootrace_plays`: `[start ms, score or null if abandoned, root id, name saved 0/1]`, capped at 20,000 rows. Test modes (`auto`, `ff`, `endtest`) don't log.
+- **Ctrl+Shift+L** opens the counter: started / finished / named per day, today by hour, and a CSV of every game.
+- The leaderboard (`rootrace_board`) keeps only the top 50 scores, so it cannot count games. Ctrl+Shift+X clears the board, not the log.
+- Local to each device and browser: count the kiosk, not visitors' phones. A shared server-side counter would need the claude.ai `db` capability, which makes the page organization-only; that is why it isn't used.
 
 ## Test hooks (URL params)
 - `?endtest=1&auto=1` plays a full round with the AI and logs `SCORE <cm> <root> {...}` to the console

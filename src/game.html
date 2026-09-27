@@ -79,6 +79,9 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
 .pw .k { flex:none; width:40px; height:46px; border-radius:11px; background:var(--tc); color:#fff; font-weight:700; font-size:26px; display:grid; place-items:center; }
 .pw canvas { width:44px; height:44px; flex:none; } .pw b { display:block; font-size:17px; color:var(--tc); } .pw i { font-style:normal; color:#b87400; font-weight:600; font-size:13px; }
 @media (max-width:760px) { .bTop, .bPow { grid-template-columns:1fr; } }
+.plays table { border-collapse:collapse; width:100%; font-size:16px; font-variant-numeric:tabular-nums; }
+.plays th, .plays td { text-align:right; padding:4px 10px; border-bottom:1px solid #eadcc2; } .plays th:first-child, .plays td:first-child { text-align:left; }
+.plays textarea { width:100%; box-sizing:border-box; height:110px; font:12px ui-monospace, Menlo, monospace; margin-top:6px; }
 .small { font-size:13px; color:var(--ink2); text-align:center; margin-top:12px; }
 </style>
 
@@ -118,6 +121,14 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
   </div>
 </div>
 
+<div id="plays" class="overlay hidden" style="z-index:10">
+  <div class="card plays" style="max-width:640px">
+    <div class="big">Play counter</div>
+    <div id="playsBody"></div>
+    <p class="small">Every game started on this device is logged here, with no cap. Clearing the leaderboard (Ctrl+Shift+X) does not clear this log. Esc closes.</p>
+    <button class="btn green" id="playsClose">Close</button>
+  </div>
+</div>
 <div id="end" class="overlay hidden">
   <div class="card">
     <div class="big">Your corn grew <em id="endScore">0</em> cm tall!</div>
@@ -544,6 +555,8 @@ window.addEventListener('mousedown', () => { if (state === 'title' && attract.ph
 window.addEventListener('keydown', e => {
   audio();
   const k = e.key.toLowerCase();
+  if (playsOpen()) { if (k === 'escape') hidePlays(); return; }
+  if (k === 'l' && e.ctrlKey && e.shiftKey) { e.preventDefault(); showPlays(); return; }
   if (document.activeElement && document.activeElement.tagName === 'INPUT') { if (k === 'enter') saveName(); return; }
   keys[k] = true;
   if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'w', 'a', 's', 'd'].includes(k)) lastKeyT = performance.now();
@@ -630,6 +643,7 @@ function beginPlay(heroId) { if (state === 'play' || state === 'brief') return; 
 function startRound(heroId) {
   if (state === 'play') return;
   state = 'play'; G = newGame(false, heroId); inputLock = 0.35;
+  logPlay(p => p.push([Date.now(), null, G.heroId, 0]));
   for (const id of ['title', 'end']) document.getElementById(id).classList.add('hidden');
   if (G.heroId === 'standard') toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
   else toast(`You are the ${G.hero.name}!`, G.hero.tag, G.hero.col, 4);
@@ -658,6 +672,7 @@ function toTitle() {
 function endGame() {
   state = 'end'; endAt = performance.now(); SFX.end();
   const g = G, score = heightCm(g.biomass);
+  logPlay(p => { const r = p.at(-1); if (r && r[1] === null) r[1] = score; });
   document.getElementById('endScore').textContent = score;
   document.getElementById('endRank').textContent = G.heroId === 'standard' ? rankOf(score) : `${rankOf(score)} · ${G.hero.name}`;
   const st = [
@@ -687,6 +702,7 @@ function saveName() {
   const name = (inp.value || '').toUpperCase().trim().slice(0, 10) || 'ROOTY';
   const b = loadBoard(), entry = { name, score: heightCm(G.biomass), id: Date.now(), hero: G.heroId === 'standard' ? '' : G.hero.name };
   b.push(entry); b.sort((a, c) => c.score - a.score); saveBoard(b.slice(0, 50));
+  logPlay(p => { const r = p.at(-1); if (r) r[3] = 1; });
   savedIdx = entry.id; inp.blur(); document.getElementById('nameBox').classList.add('hidden'); drawBoards();
 }
 const heightCm = b => Math.round(12 + b * 3);
@@ -713,6 +729,32 @@ const FACTS = [
 ];
 function loadBoard() { try { return JSON.parse(localStorage.getItem('rootrace_board') || '[]'); } catch (e) { return []; } }
 function saveBoard(b) { try { localStorage.setItem('rootrace_board', JSON.stringify(b)); } catch (e) {} }
+// Play log: one row per game started, [start ms, score or null if abandoned, root id, name saved 0/1].
+// Uncapped by score (the leaderboard keeps only the top 50); test modes don't log. Ctrl+Shift+L shows it.
+const LOG_PLAYS = !['auto', 'ff', 'endtest'].some(k => QS.has(k));
+function loadPlays() { try { return JSON.parse(localStorage.getItem('rootrace_plays') || '[]'); } catch (e) { return []; } }
+function logPlay(edit) { if (!LOG_PLAYS) return; try { const p = loadPlays(); edit(p); localStorage.setItem('rootrace_plays', JSON.stringify(p.slice(-20000))); } catch (e) {} }
+const playsOpen = () => !document.getElementById('plays').classList.contains('hidden');
+function hidePlays() { document.getElementById('plays').classList.add('hidden'); }
+function showPlays() {
+  const p = loadPlays(), day = t => new Date(t).toLocaleDateString('en-CA'), today = day(Date.now()), days = {}, hours = {};
+  for (const r of p) {
+    const d = days[day(r[0])] ||= { started: 0, finished: 0, saved: 0 };
+    d.started++; if (r[1] !== null) d.finished++; if (r[3]) d.saved++;
+    if (day(r[0]) === today) { const h = new Date(r[0]).getHours(); hours[h] = (hours[h] || 0) + 1; }
+  }
+  const hr = h => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+  const rows = Object.keys(days).sort().reverse().map(k => `<tr><td>${k}</td><td>${days[k].started}</td><td>${days[k].finished}</td><td>${days[k].saved}</td></tr>`).join('');
+  const csv = ['start,score,root,name_saved', ...p.map(r => `${new Date(r[0]).toISOString()},${r[1] ?? ''},${r[2]},${r[3]}`)].join('\n');
+  document.getElementById('playsBody').innerHTML = p.length
+    ? `<table><tr><th>Day</th><th>Started</th><th>Finished</th><th>Name saved</th></tr>${rows}</table>`
+      + (Object.keys(hours).length ? `<h3 style="margin-top:14px">Today by hour</h3><div>${Object.keys(hours).map(Number).sort((a, b) => a - b).map(h => `${hr(h)}: <b>${hours[h]}</b>`).join(' &middot; ')}</div>` : '')
+      + `<h3 style="margin-top:14px">All games (CSV, select and copy)</h3><textarea readonly>${csv}</textarea>`
+    : '<div class="empty">No games logged on this device yet.</div>';
+  document.getElementById('plays').classList.remove('hidden');
+}
+document.getElementById('plays').addEventListener('mousedown', e => e.stopPropagation());
+document.getElementById('playsClose').addEventListener('click', hidePlays);
 function drawBoards() {
   const all = loadBoard(), row = e => `<li class="${e.id === savedIdx ? 'me' : ''}">${escapeHtml(e.name)}${e.hero ? ` <span class="hn">· ${escapeHtml(e.hero)}</span>` : ''} <span class="sc">${e.score} cm</span></li>`, none = '<div class="empty">No scores yet. Be the first!</div>';
   document.getElementById('boardTitle').innerHTML = all.length ? all.slice(0, 5).map(row).join('') : none;
