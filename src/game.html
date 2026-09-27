@@ -70,6 +70,15 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
 .qr img { width:92px; height:92px; image-rendering:pixelated; flex:none; } .qr b { display:block; font-size:15px; color:var(--green); }
 @media (max-width:760px) { .qr { display:none; } .titleFoot { grid-template-columns:1fr; } .step canvas { width:48px; height:48px; } }
 @media (max-width:700px) { .how, .titleFoot { grid-template-columns:1fr; } }
+.card.brief { max-width:900px; }
+.bTop { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+.bt { display:flex; gap:10px; align-items:center; background:var(--tile); border-radius:16px; padding:8px 12px; font-size:14.5px; line-height:1.25; }
+.bt canvas { width:52px; height:52px; flex:none; } .bt b { display:block; font-size:17px; font-weight:600; }
+.bPow { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pw { display:flex; gap:10px; align-items:center; background:#fff; border:3px solid var(--tc); border-radius:16px; padding:7px 12px; font-size:14.5px; line-height:1.25; }
+.pw .k { flex:none; width:40px; height:46px; border-radius:11px; background:var(--tc); color:#fff; font-weight:700; font-size:26px; display:grid; place-items:center; }
+.pw canvas { width:44px; height:44px; flex:none; } .pw b { display:block; font-size:17px; color:var(--tc); } .pw i { font-style:normal; color:#b87400; font-weight:600; font-size:13px; }
+@media (max-width:760px) { .bTop, .bPow { grid-template-columns:1fr; } }
 .small { font-size:13px; color:var(--ink2); text-align:center; margin-top:12px; }
 </style>
 
@@ -91,6 +100,21 @@ h3 { margin:0 0 10px; font-size:13px; letter-spacing:.14em; text-transform:upper
       <div class="qr"><img id="imgQR" alt="QR code for the game website"><div><b>Play on your phone</b>Scan to play at home, or share with a friend!</div></div>
       <div class="science"><img id="imgAer" alt="Corn root cross-section with air channels"><div>A real corn root from our lab, glowing under the microscope. The dark holes are <b>air channels</b>, one of your superpowers!</div></div>
     </div>
+  </div>
+</div>
+
+<div id="brief" class="overlay hidden">
+  <div class="card brief">
+    <div class="big">Your root's <em>buttons</em></div>
+    <div class="bTop">
+      <div class="bt"><canvas data-icon="mouse"></canvas><div><b>Move the mouse</b>Steer your root. Roots only grow <u>down</u> or sideways!</div></div>
+      <div class="bt"><canvas data-icon="click"></canvas><div><b>Click (or SPACE)</b>Grow a side root that hunts for food. Costs 8 sugar.</div></div>
+      <div class="bt"><canvas data-icon="sugar"></canvas><div><b>Sugar = energy</b>Growing costs sugar. Your leaves make more as your corn grows.</div></div>
+    </div>
+    <h3 style="margin-top:14px">Root superpowers: press a number key, or click the button on the right</h3>
+    <div class="bPow" id="briefPow"></div>
+    <div class="small" style="font-size:15px">A button <b>flashes</b> when it is a good time to use it!</div>
+    <button class="start" id="goBtn">I'm ready! Click or press SPACE</button>
   </div>
 </div>
 
@@ -131,18 +155,19 @@ const CFG = {
   diveFraction: 0.85,                                  // soil depth = a nonstop straight dive lasting this share of the round
   seekLen: 150, autoLen: [30, 62], auto2Len: [14, 24], // lateral lengths (px)
   autoGap: [26, 46], seekGap: [22, 36],                // spacing of automatic laterals
-  seekCost: 8, autoCost: 1, growCost: 0.045,
+  seekCost: 8, autoCost: 0.6, growCost: 0.028,
   aerCost: 5, armorCost: 20, hairCost: 10, exuCost: 8, // root traits on keys 1-4
   crownCost: 12, crownLen: 230,                        // key 5: crown roots from the stem base into the topsoil
   exuTime: 8, exuR: 75,                                // exudates: seconds active, max spread of each puff (px)
-  maintPerNode: 0.003, aerMaint: 0.3,                  // sugar/s to keep each 5 px of root alive; aerenchyma cuts it to 30%
-  incomeBase: 4.5, incomePerBio: 0.1,
-  fungusDrain: 0.2, fungusR: 140,
-  sugarStart: 80, sugarMax: 100, poolMax: 30,
+  maintPerNode: 0.0018, aerMaint: 0.3,                  // sugar/s to keep each 5 px of root alive; aerenchyma cuts it to 30%
+  incomeBase: 7, incomePerBio: 0.14,
+  fungusDrain: 0.12, fungusR: 190,
+  sugarStart: 100, burrowSugar: 5,                     // sugar/s earned while the main tip rides a worm tunnel
+  sugarMax: 100, poolMax: 30,
   density: [150, 95, 125],   // water, N, P particles per 1M px² of soil
   respawn: [3.2, 2.0, 1.2], // per second per 1M px²
   rainAt: 16, wormAt: 26, droughtAt: 38, wormLife: 20,
-  spores: 8, nematodes: 5, nemPerMpx: 3, nemWave: [8, 12, 16], powerups: 4, rocksPerMpx: 11,
+  spores: 24, nematodes: 5, nemPerMpx: 3, nemWave: [8, 12, 16], powerups: 4, rocksPerMpx: 11,
   soilCm: 150, plantCmMax: 260,
 };
 const W_ = 0, N_ = 1, P_ = 2;
@@ -191,30 +216,49 @@ const font = (px, w = 600) => `${w} ${px}px ${FONT}`;
 // SOUND (generated with WebAudio)
 // =====================================================================================
 let AC = null, muted = false;
-function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); }
+let OUT = null; // master bus: compressor keeps loud stacks from clipping, gain makes the booth hear it
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); const c = AC.createDynamicsCompressor(); OUT = AC.createGain(); OUT.gain.value = 2.2; OUT.connect(c).connect(AC.destination); } catch (e) {} }
+  if (AC && AC.state === 'suspended') AC.resume();
+}
 function tone(f, dur = 0.1, type = 'sine', vol = 0.12, f2 = null, delay = 0) {
-  if (!AC || muted || (G && G.demo)) return;
+  if (!AC || !OUT || muted || (G && G.demo)) return;
   const t0 = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t0);
   if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  o.connect(g).connect(OUT); o.start(t0); o.stop(t0 + dur + 0.02);
 }
 let lastBlip = 0;
 const SFX = {
   pick(type, combo) { const now = performance.now(); if (now - lastBlip < 35) return; lastBlip = now;
-    const f = [330, 440, 587][type] * Math.pow(1.06, Math.min(combo, 12)); tone(f, 0.08, 'triangle', 0.08, f * 1.5); },
-  branch() { tone(220, 0.12, 'square', 0.05, 330); },
+    const f = [330, 440, 587][type] * Math.pow(1.06, Math.min(combo, 12)); tone(f, 0.12, 'triangle', 0.14, f * 1.5); },
+  branch() { tone(220, 0.15, 'square', 0.09, 440); },
   fungus() { [392, 494, 587, 784].forEach((f, i) => tone(f, 0.25, 'triangle', 0.1, null, i * 0.08)); },
   power() { tone(300, 0.35, 'sawtooth', 0.06, 1200); tone(600, 0.35, 'triangle', 0.06, 1800, 0.05); },
   armor() { tone(160, 0.35, 'square', 0.07, 90); [262, 330, 392].forEach((f, i) => tone(f, 0.2, 'triangle', 0.07, null, 0.05 + i * 0.07)); },
   chomp() { tone(120, 0.06, 'square', 0.05, 70); },
   bite() { tone(140, 0.25, 'sawtooth', 0.12, 60); },
-  bump() { tone(90, 0.06, 'square', 0.04); },
+  bump() { tone(110, 0.09, 'square', 0.07); },
   event() { tone(523, 0.18, 'square', 0.07); tone(392, 0.3, 'square', 0.07, null, 0.18); },
   tick(hi) { tone(hi ? 1046 : 784, 0.08, 'square', 0.06); },
   end() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.12, null, i * 0.12)); },
+  go() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.18, 'square', 0.08, null, i * 0.07)); },
 };
+// background music: a bouncy 8-step loop scheduled ahead on the audio clock while a round is on
+const MUSIC = { bass: [131, 131, 196, 196, 175, 175, 147, 196], mel: [523, 0, 659, 784, 0, 659, 587, 0, 523, 0, 440, 523, 587, 0, 659, 0], next: 0, step: 0 };
+function musicTick() {
+  if (!AC || !OUT || muted || state !== 'play' || !G || G.demo) { if (AC) MUSIC.next = AC.currentTime + 0.05; return; }
+  const beat = 60 / 132 / 2;
+  if (MUSIC.next < AC.currentTime) MUSIC.next = AC.currentTime + 0.05;
+  while (MUSIC.next < AC.currentTime + 0.2) {
+    const d = MUSIC.next - AC.currentTime, i = MUSIC.step++, fast = G.t > G.dur - 10;
+    if (i % 2 === 0) tone(MUSIC.bass[(i / 2) % 8] * (fast ? 1.06 : 1), beat * 1.6, 'triangle', 0.09, null, d);
+    const m = MUSIC.mel[i % 16]; if (m) tone(m * (fast ? 1.06 : 1), beat * 0.9, 'square', 0.025, null, d);
+    if (i % 4 === 2) tone(2400, 0.03, 'square', 0.012, 1200, d);
+    MUSIC.next += beat * (fast ? 0.8 : 1);
+  }
+}
 
 // =====================================================================================
 // SPRITES
@@ -341,6 +385,7 @@ function newGame(demo, heroId = 'standard') {
     const y0 = rand(8, D * 0.1), y1 = y0 + D * rand(0.4, 0.65), ph = rand(0, 6), amp = rand(12, 26), pts = [];
     for (let y = y0; y <= y1; y += 8) pts.push([x0 + Math.sin((y - y0) / 110 + ph) * amp, y]);
     g.burrows.push({ pts, worm: rand(0, 1), wdir: 1 });
+    for (let k = 3; k < pts.length; k += 3) g.parts.push({ x: pts[k][0] + rand(-6, 6), y: pts[k][1], t: k % 2 ? N_ : P_, fly: null, ph: rand(0, 6), a: 1 });
   }
   // rocks
   const nr = Math.round(CFG.rocksPerMpx * g.area);
@@ -357,7 +402,8 @@ function newGame(demo, heroId = 'standard') {
   g.target = CFG.density.map(v => Math.round(v * g.area));
   for (let t = 0; t < 3; t++) for (let i = 0; i < g.target[t]; i++) spawnPart(g, t);
   // fungi, power-ups, nematodes
-  for (let i = 0; i < CFG.spores; i++) g.spores.push({ x: rand(30, worldW - 30), y: i < 3 ? rand(40, D * 0.35) : rand(40, D * 0.6), ph: rand(0, 6) });
+  for (let i = 0; i < CFG.spores; i++) { const cw = (worldW - 60) / CFG.spores; // one spore per vertical strip, so they cover the whole width
+    g.spores.push({ x: 30 + cw * (i + rand(0.15, 0.85)), y: i % 3 === 0 ? rand(40, D * 0.3) : rand(40, D * 0.8), ph: rand(0, 6) }); }
   g.spores[0].x = clamp(g.plantX + (Math.random() < 0.5 ? -1 : 1) * rand(50, 110), 30, worldW - 30); g.spores[0].y = rand(45, 90);
   for (let i = 0; i < CFG.powerups; i++) spawnPower(g);
   for (let i = 0; i < Math.max(CFG.nematodes, Math.round(CFG.nemPerMpx * g.area)); i++) g.nems.push({ x: rand(30, worldW - 30), y: rand(D * 0.2, D - 30), a: rand(0, 6), ph: rand(0, 6), cd: 0, flee: 0 });
@@ -510,6 +556,7 @@ window.addEventListener('keydown', e => {
     if (state === 'title') startPlay();
     else if (state === 'play' && k === ' ') branch();
     else if (state === 'end' && endReady()) toTitle();
+    else if (state === 'brief') goFromBrief();
   }
   if (k.startsWith('arrow')) e.preventDefault();
 });
@@ -554,13 +601,38 @@ function buildRootButtons() { // "try again as" row on the end screen
   });
   xsCache = { key: '', c: null };
 }
-function beginPlay(heroId) {
+const BRIEF = {
+  aer: 'Big roots cost sugar to keep alive. Air channels make them <b>cheaper</b>. Use it when your root gets big.',
+  lig: 'Tough woody walls. Use it when the <b>ROOTWORM</b> attacks or in hard, packed soil.',
+  hair: 'Tiny hairs grab food from <b>farther away</b> for 15 seconds.',
+  exu: 'Your root leaks chemicals that chase away <b>nematodes</b> (tiny worms).',
+  crown: 'New roots grow from the stem into the topsoil, where the <b>phosphorus</b> is.',
+};
+let pendingHero = null, briefAt = 0;
+function showBrief(heroId) {
+  pendingHero = heroId; state = 'brief'; briefAt = performance.now();
+  for (const id of ['title', 'end']) document.getElementById(id).classList.add('hidden');
+  document.getElementById('demoBar').classList.add('hidden');
+  const box = document.getElementById('briefPow');
+  if (!box.children.length) TRAITS.forEach(T => {
+    const d = document.createElement('div'); d.className = 'pw'; d.style.setProperty('--tc', T.col);
+    d.innerHTML = `<div class="k">${T.key}</div><canvas width="88" height="88"></canvas><div><b>${T.name}</b>${BRIEF[T.id]} <i>${T.cost()} sugar</i></div>`;
+    d.querySelector('canvas').getContext('2d').drawImage(SPR[T.spr], 0, 0, 88, 88); box.appendChild(d);
+  });
+  document.getElementById('brief').classList.remove('hidden');
+}
+function goFromBrief() {
+  if (state !== 'brief' || performance.now() - briefAt < 600) return;
+  document.getElementById('brief').classList.add('hidden'); state = 'title'; SFX.go(); startRound(pendingHero);
+}
+document.getElementById('brief').addEventListener('click', () => { audio(); goFromBrief(); });
+function beginPlay(heroId) { if (state === 'play' || state === 'brief') return; showBrief(heroId); }
+function startRound(heroId) {
   if (state === 'play') return;
   state = 'play'; G = newGame(false, heroId); inputLock = 0.35;
   for (const id of ['title', 'end']) document.getElementById(id).classList.add('hidden');
   if (G.heroId === 'standard') toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
   else toast(`You are the ${G.hero.name}!`, G.hero.tag, G.hero.col, 4);
-  toast('GO! Steer with the mouse', 'Find water, nitrogen (N) and phosphorus (P)', '#2f9e44', 3);
   setTimeout(() => { if (G && !G.demo && G.t < 15) toast('CLICK for a seeker root', 'It hunts for food on its own (8 sugar)', '#b0630a', 3.5); }, 5500);
 }
 function toCard() {
@@ -654,9 +726,11 @@ function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 // MESSAGES / FX
 // =====================================================================================
 // phones have no number keys: 'Press 4 ...' becomes 'Tap Exudates ...'
-const forDevice = txt => compact() ? txt.replace(/[Pp]ress ([1-5])( for| to)?/g, (m, d) => 'Tap ' + TRAITS[d - 1].name.toUpperCase() + ' ') : txt;
+const forDevice = txt => compact() ? txt.replace(/[Pp]ress ([1-5])(?: for| to)?( [A-Za-z ]+)?/g, (m, d, rest = '') => {
+  const nm = TRAITS[d - 1].name, r = rest.trimStart(), same = r.toLowerCase().startsWith(nm.toLowerCase());
+  return 'Tap ' + nm.toUpperCase() + (same ? r.slice(nm.length) : rest); }) : txt;
 function toast(title, sub, color = '#2d1e14', dur = 3, urgent = false) {
-  if (!G || (G.demo && !G.attract)) return; const m = { title, sub: forDevice(sub), color, dur, t: 0 };
+  if (!G || (G.demo && !G.attract)) return; const m = { title, sub: forDevice(sub), color, dur: dur * 1.3, t: 0 };
   if (urgent) G.toasts = [m]; else if (G.toasts.length < 3) G.toasts.push(m);
 }
 function once(key, title, sub, color, dur) { if (G.seen[key]) return; G.seen[key] = 1; toast(title, sub, color, dur); }
@@ -754,7 +828,9 @@ function update(dt) {
   if (want === null) want = lerpAngle(m.tip.a, Math.PI / 2, 0.3); // gravitropism
   else if (Math.sin(want) < 0) want = Math.cos(want) >= 0 ? 0.06 : Math.PI - 0.06; // pointing up = go sideways that way
   m.tip.a = downAngle(m.tip.a + clamp(angDiff(m.tip.a, want), -3.2 * dt, 3.2 * dt));
-  if (!g.demo && Math.sin(want) < -0.4 && g.t > 2) once('up', 'Roots can\'t grow UP!', 'Roots feel gravity and grow down or sideways (gravitropism)', '#b0630a', 3.5);
+  if (!g.demo && Math.sin(want) < -0.4 && g.t > 1 && g.t - (g.upT ?? -99) > 5) { g.upT = g.t; SFX.bump();
+    toast('Roots only grow DOWN!', 'Roots feel gravity, so they grow down or sideways, never up (gravitropism)', '#b0630a', 3, true);
+    floatText(m.tip.x, m.tip.y - 20, '⬇ DOWN only!', '#ffcf4a', 20); }
 
   for (const r of g.roots) if (r.alive) growRoot(g, r, dt);
 
@@ -765,10 +841,15 @@ function update(dt) {
   if (gr < rate * 0.9 && g.t > 4) { let lo = 0; for (let i = 1; i < 3; i++) if (g.pool[i] < g.pool[lo]) lo = i; g.limiting = lo; g.limitT[lo] += dt; } else g.limiting = -1;
   g.pool[W_] = Math.max(0, g.pool[W_] - (0.15 + g.biomass * 0.006) * dt); // transpiration
   g.wilted = g.pool[W_] <= 0.01 && g.t > 6;
+  // what the tip should chase now: the limiting nutrient, held a moment so the hint doesn't flicker
+  const fw = g.wilted ? W_ : g.limiting;
+  if (fw === g.focusCand) g.focusHold += dt; else { g.focusCand = fw; g.focusHold = 0; }
+  if (g.focusHold > (fw < 0 ? 2 : 0.8)) g.focus = fw;
   const income = (CFG.incomeBase + g.biomass * CFG.incomePerBio) * (g.wilted ? 0.4 : 1);   // photosynthesis
   const upkeep = CFG.maintPerNode * ((g.liveNodes - g.aerNodes) + CFG.aerMaint * g.aerNodes); // root respiration
   const drain = upkeep + g.fungi.length * CFG.fungusDrain * g.mod.fungDrain;
   g.sugar = clamp(g.sugar + (income - drain) * dt, 0, CFG.sugarMax);
+  if (!g.demo) { if (g.sugar <= 1) g.lowT = (g.lowT || 0) + dt; g.minSug = Math.min(g.minSug ?? 1e9, g.sugar); if (Math.floor(g.t / 10) !== Math.floor((g.t - dt) / 10)) (g.trace = g.trace || []).push(Math.round(g.sugar)); }
   g.aerSave = CFG.maintPerNode * (1 - CFG.aerMaint) * g.aerNodes; // sugar/s no longer lost to root upkeep
   if (g.aerNodes > 0) { g.aerFxT = (g.aerFxT || 0) + dt; if (g.aerFxT > 0.25) { g.aerFxT = 0; // gold sparkles rise from air-channel sections
     const r = g.roots[(Math.random() * g.roots.length) | 0], n = r.pts[(Math.random() * r.pts.length) | 0];
@@ -789,6 +870,8 @@ function update(dt) {
     while (g.respawnAcc[t] >= 1) { g.respawnAcc[t] -= 1; if (count < g.target[t] * (t === W_ && g.drought ? 0.7 : 1)) spawnPart(g, t); }
   }
   g.powerAcc += dt; if (g.powerAcc > 10 && g.powers.length < CFG.powerups) { g.powerAcc = 0; spawnPower(g); }
+  g.sporeAcc = (g.sporeAcc || 0) + dt; // keep fungus spores topped up as players collect them
+  if (g.sporeAcc > 4 && g.spores.length < CFG.spores * 0.6) { g.sporeAcc = 0; g.spores.push({ x: rand(30, g.worldW - 30), y: rand(40, g.D * 0.8), ph: rand(0, 6) }); }
 
   for (let i = g.spores.length - 1; i >= 0; i--) {
     const s = g.spores[i];
@@ -828,7 +911,12 @@ function growRoot(g, r, dt) {
   } else r.tip.a = downAngle(lerpAngle(r.tip.a, Math.PI / 2, 0.25 * dt) + Math.sin(g.t * 2 + r.born * 7) * 0.4 * dt);
 
   const inBurrow = nearBurrow(g, r.tip.x, r.tip.y);
-  if (inBurrow) { spd *= 2.4; if (r.main && !g.demo) once('burrow', 'EARTHWORM HIGHWAY!', 'Roots zoom down old worm tunnels', '#c2185b', 3); }
+  if (inBurrow) { spd *= 2.4;
+    if (r.main) { g.sugar = Math.min(CFG.sugarMax, g.sugar + CFG.burrowSugar * dt); g.burrowT = (g.burrowT || 0) + dt;
+      if (!g.demo) { if (!g.inBurrow) { SFX.power(); burst(r.tip.x, r.tip.y, '#ff8fb8', 14, 90); }
+        once('burrow', 'EARTHWORM HIGHWAY!', 'Zoom down old worm tunnels: FREE growth, bonus sugar, and worm poop full of N and P!', '#c2185b', 4);
+        if (g.burrowT > 0.5) { g.burrowT = 0; floatText(r.tip.x + 14, r.tip.y - 10, '+sugar ZOOM!', '#ff8fb8', 15); } } } }
+  if (r.main) g.inBurrow = inBurrow;
   const inPan = r.tip.y > g.hardY && r.tip.y < g.hardY + g.hardH;
   if (inPan && !inBurrow) { spd *= g.mod.pan || (g.armorUses ? 0.75 : 0.4); if (r.main && !g.demo) once('pan', 'HARDPAN! Packed soil', 'Slow going. Find a worm tunnel, or press 2 for lignin armor to push through', '#5d4f45', 3.5); }
   if (g.sugar <= 0.5) { spd *= 0.3; if (r.main && !g.demo) once('nosugar', 'Out of SUGAR!', 'Leaves make sugar as the plant grows. Collect all 3 foods!', '#b0630a', 3.5); }
@@ -854,7 +942,7 @@ function growRoot(g, r, dt) {
   }
   const moved = Math.hypot(nx - r.tip.x, ny - r.tip.y);
   r.tip.x = nx; r.tip.y = ny; r.len += moved; r.acc += moved; g.rootLen += moved;
-  const cost = moved * CFG.growCost * g.mod.cost * (r.main ? 1 : 0.7); g.sugar = Math.max(0, g.sugar - cost); g.costAcc += cost;
+  const cost = inBurrow ? 0 : moved * CFG.growCost * g.mod.cost * (r.main ? 1 : 0.7); g.sugar = Math.max(0, g.sugar - cost); g.costAcc += cost;
   if (r.acc >= 5) { r.acc = 0; addNode(g, r, nx, ny); }
   if (!r.alive) addNode(g, r, nx, ny);
   if (r.main || r.kind === 'seek') { r.latAcc += moved; if (r.latAcc > r.latGap) { r.latAcc = 0; r.latGap = rand(...(r.main ? CFG.autoGap : CFG.seekGap)) * g.mod.gap; autoLateral(g, r); } }
@@ -972,7 +1060,7 @@ function nemUpdate(g, n, dt) {
   n.a += clamp(angDiff(n.a, want), -2.5 * dt, 2.5 * dt);
   if (n.flee <= 0) for (const f of g.puffs) { const fr = f.R * puffGrow(f.t);
     if (Math.hypot(f.x - n.x, f.y - n.y) < fr + 6) { n.flee = 1.8; n.a = Math.atan2(n.y - f.y, n.x - f.x); floatText(n.x, n.y - 12, 'Yuck! Exudates!', '#5fe0d8', 14); break; } }
-  if (!g.demo && d < 170 && n.cd <= 0 && n.flee <= 0 && g.t > 3) once('nemaWarn', 'NEMATODE COMING!', 'Press 4 to release EXUDATES, root chemicals that scare it away', '#138a8a', 4);
+  if (!g.demo && d < 170 && n.cd <= 0 && n.flee <= 0 && g.t > 3) { if (g.buff.exu <= 0 && g.t - (g.nemWarnT ?? -99) > 6) { g.nemWarnT = g.t; toast('NEMATODE COMING!', 'Press 4 for EXUDATES to scare it away', '#138a8a', 3, true); floatText(n.x, n.y - 22, 'Press 4!', '#5fe0d8', 20); } }
   if (n.flee <= 0) { const c = nearestNode(g, n.x, n.y, 26, q => q.col && !q.dead);
     if (c) { n.flee = 1.5; n.a = Math.atan2(n.y - c.y, n.x - c.x); floatText(n.x, n.y - 12, 'Blocked by fungus!', '#ffb35c', 14);
       if (!g.demo) once('fungShield', 'FUNGUS SHIELD!', 'Fungi help protect roots from nematodes', '#e07b12', 3); } }
@@ -981,7 +1069,7 @@ function nemUpdate(g, n, dt) {
   if (d < 15 && n.cd <= 0 && g.stun <= 0 && g.buff.exu <= 0) {
     n.cd = 6; n.flee = 2; n.a += Math.PI; g.stun = 1.1; g.shake = 1; g.bites++;
     g.sugar = Math.max(0, g.sugar - 8); SFX.bite(); floatText(m.x, m.y - 16, 'OUCH! -8 sugar', '#ff6b6b', 18); burst(m.x, m.y, '#ff6b6b', 12, 80);
-    if (!g.demo) once('nema', 'NEMATODE BITE!', 'These tiny worms eat roots. Dodge them!', '#c0392b', 3);
+    if (!g.demo) toast('NEMATODE BITE!', 'Press 4 for EXUDATES to scare them away!', '#c0392b', 3, true);
   }
 }
 // Corn rootworm: chews every root section that isn't armored
@@ -1047,7 +1135,7 @@ function nemWave(g) { // 2-3 nematodes wriggle out of the soil near the root and
     const a = rand(0.2, Math.PI - 0.2) + (i - 1) * 0.5, x = clamp(m.x + Math.cos(a) * 210, 20, g.worldW - 20), y = clamp(m.y + Math.sin(a) * 170, 60, g.D - 20);
     g.nems.push({ x, y, a: Math.atan2(m.y - y, m.x - x), ph: rand(0, 6), cd: 0, flee: 0 }); burst(x, y, '#efe6da', 8, 50);
   }
-  toast('NEMATODES INCOMING!', 'Press 4 to release EXUDATES from your root tip', '#138a8a', 3, true);
+  toast('NEMATODES COMING!', 'Press 4 for EXUDATES to scare them away', '#138a8a', 3, true); g.nemWarnT = g.t;
 }
 function events(g, dt) {
   const t = g.t;
@@ -1350,16 +1438,61 @@ function drawHUD(g, v) {
   if (g.fungi.length) chip(SPR.spore, `${g.fungi.length} fungus friend${g.fungi.length > 1 ? 's' : ''} · -${(g.fungi.length * CFG.fungusDrain).toFixed(1)} sugar/s`, '#b0630a');
   if (g.buff.auxin > 0) chip(SPR.auxin, `Auxin ${Math.ceil(g.buff.auxin)}s`, '#b87400');
   if (g.combo >= 3) chip(null, `COMBO x${g.combo}`, '#b87400');
+  let pressRight = null; // side of the tip the 'Press N' tag took
   // toast: placed away from the root tip
   if (g.toasts.length) {
     const tt = g.toasts[0], a = Math.min(1, tt.t * 5, (tt.dur - tt.t) * 3), sc = 1 + Math.max(0, 0.2 - tt.t) * 1.2;
     const tipSy = v.oy + g.main.tip.y * v.s, ty = tipSy < H * 0.5 ? H - (C ? BAR + 60 : 110) : (C ? 170 : 150);
     ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, ty); ctx.scale(sc, sc);
-    ctx.font = font(Math.min(34, W / 30), 700); const w1 = ctx.measureText(tt.title).width; ctx.font = font(Math.min(18, W / 55), 500); const w2 = ctx.measureText(tt.sub).width;
-    const bw2 = Math.max(w1, w2) + 48; pill(-bw2 / 2, -38, bw2, 78, 22, 'rgba(255,251,242,.97)');
-    ctx.fillStyle = tt.color; ctx.beginPath(); ctx.roundRect(-bw2 / 2, -38, 8, 78, [22, 0, 0, 22]); ctx.fill();
-    ctx.textAlign = 'center'; ctx.font = font(Math.min(34, W / 30), 700); ctx.fillStyle = tt.color; ctx.fillText(tt.title, 0, -12);
-    ctx.font = font(Math.min(18, W / 55), 500); ctx.fillStyle = '#2d1e14'; ctx.fillText(tt.sub, 0, 20);
+    // a 'Press N' tip gets a big key cap in that superpower's colour
+    const km = /[Pp]ress ([1-5])/.exec(tt.sub), T = km && !C ? TRAITS[km[1] - 1] : null, kw = T ? 76 : 0;
+    const fT = Math.min(46, W / 22), fS = Math.min(25, W / 40);
+    ctx.font = font(fT, 700); const w1 = ctx.measureText(tt.title).width; ctx.font = font(fS, 600); const w2 = ctx.measureText(tt.sub).width;
+    const bw2 = Math.min(W - 24, Math.max(w1, w2) + 60 + kw), bh2 = 104, cx = kw / 2;
+    pill(-bw2 / 2, -bh2 / 2, bw2, bh2, 26, 'rgba(255,251,242,.98)');
+    ctx.strokeStyle = tt.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.roundRect(-bw2 / 2, -bh2 / 2, bw2, bh2, 26); ctx.stroke();
+    if (T) { const pulse = 1 + Math.sin(tt.t * 10) * 0.06, kx = -bw2 / 2 + 14;
+      ctx.save(); ctx.translate(kx + 28, 0); ctx.scale(pulse, pulse);
+      ctx.fillStyle = T.col; ctx.beginPath(); ctx.roundRect(-28, -34, 56, 68, 14); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.roundRect(-28, 24, 56, 10, [0, 0, 14, 14]); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = font(42, 700); ctx.textAlign = 'center'; ctx.fillText(T.key, 0, -2); ctx.restore(); }
+    ctx.textAlign = 'center'; ctx.font = font(fT, 700); ctx.fillStyle = tt.color; ctx.fillText(tt.title, cx, -18, bw2 - 30 - kw);
+    ctx.font = font(fS, 600); ctx.fillStyle = '#2d1e14'; ctx.fillText(tt.sub, cx, 26, bw2 - 30 - kw);
+    ctx.restore();
+    // the same 'Press N' also rides beside the root tip, where the player is looking
+    const km2 = /[Pp]ress ([1-5])/.exec(tt.sub), T2 = km2 ? TRAITS[km2[1] - 1] : TRAITS.find(t => tt.sub.includes('Tap ' + t.name.toUpperCase()));
+    if (T2 && state === 'play') {
+      const tsx = v.ox + g.main.tip.x * v.s, lbl = C ? 'TAP ' + T2.name.toUpperCase() : T2.name.toUpperCase();
+      ctx.save(); ctx.globalAlpha = a; ctx.font = font(C ? 16 : 19, 700); ctx.textBaseline = 'middle';
+      const lw = ctx.measureText(lbl).width + 24, capW = C ? 0 : 46, tw = capW + lw + (C ? 0 : 6), aw = W - panelWidth();
+      const right = pressRight = tsx + 40 + tw < aw - 20, bx = clamp(right ? tsx + 40 : tsx - 40 - tw, 8, aw - tw - 8), by = clamp(tipSy, 150, H - (C ? BAR + 40 : 70)), nud = Math.sin(tt.t * 10) * 3 * (right ? 1 : -1);
+      ctx.translate(nud, 0);
+      ctx.fillStyle = T2.col; ctx.beginPath(); // pointer to the tip
+      const px = right ? bx : bx + tw; ctx.moveTo(px, by - 9); ctx.lineTo(px, by + 9); ctx.lineTo(right ? tsx + 20 : tsx - 20, tipSy); ctx.closePath(); ctx.fill();
+      if (!C) { ctx.beginPath(); ctx.roundRect(bx, by - 26, capW, 52, 11); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.roundRect(bx, by + 18, capW, 8, [0, 0, 11, 11]); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = font(32, 700); ctx.fillText(T2.key, bx + capW / 2, by - 3); ctx.font = font(19, 700); }
+      const lx = bx + (C ? 0 : capW + 6); ctx.fillStyle = 'rgba(255,251,242,.97)'; ctx.beginPath(); ctx.roundRect(lx, by - 17, lw, 34, 17); ctx.fill();
+      ctx.strokeStyle = T2.col; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = T2.col; ctx.textAlign = 'center'; ctx.fillText(lbl, lx + lw / 2, by + 1);
+      ctx.restore();
+    }
+  }
+  // focus chip on the other side of the tip: which nutrient is holding the corn back, and an arrow to the nearest one
+  if (state === 'play' && !g.demo && g.focus >= 0) {
+    const k = g.focus, m = g.main.tip, col = ['#1f86d6', '#23a043', '#8e44d0'][k], lbl = ['NEED WATER', 'NEED N', 'NEED P'][k];
+    const tsx = v.ox + m.x * v.s, tsy = v.oy + m.y * v.s, aw = W - panelWidth();
+    let best = null, bd = 520; for (const p of g.parts) if (p.t === k && !p.fly) { const d = Math.hypot(p.x - m.x, p.y - m.y); if (d < bd) { bd = d; best = p; } }
+    ctx.save(); ctx.globalAlpha = 0.8 + Math.sin(g.t * 6) * 0.2;
+    if (best) { const ang = Math.atan2(best.y - m.y, best.x - m.x); ctx.save(); ctx.translate(tsx, tsy); ctx.rotate(ang); ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(44, 0); ctx.lineTo(28, -10); ctx.lineTo(28, 10); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    ctx.font = font(C ? 14 : 16, 700); ctx.textBaseline = 'middle';
+    const cw = ctx.measureText(lbl).width + 46, right = pressRight === null ? tsx < aw / 2 : !pressRight;
+    const cx = clamp(right ? tsx + 40 : tsx - 40 - cw, 8, aw - cw - 8), cy = clamp(tsy, 150, H - (C ? BAR + 40 : 70));
+    ctx.fillStyle = 'rgba(255,251,242,.95)'; ctx.beginPath(); ctx.roundRect(cx, cy - 16, cw, 32, 16); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
+    ctx.drawImage(TSPR[k], cx + 5, cy - 12, 24, 24);
+    ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(lbl, cx + 34, cy + 1);
     ctx.restore();
   }
   if (state === 'end') {
@@ -1368,9 +1501,9 @@ function drawHUD(g, v) {
   }
   // controls
   if (C) return;
-  ctx.font = font(13, 500); const hint = 'Mouse: steer  ·  Click: side root  ·  Keys 1-5: root superpowers  ·  M: sound  ·  F: fullscreen' + (muted ? '  ·  MUTED' : '');
-  const hw = ctx.measureText(hint).width + 28; ctx.fillStyle = 'rgba(20,12,6,.5)'; ctx.beginPath(); ctx.roundRect(W / 2 - hw / 2, H - 34, hw, 24, 12); ctx.fill();
-  ctx.fillStyle = 'rgba(255,245,225,.85)'; ctx.textAlign = 'center'; ctx.fillText(hint, W / 2, H - 21);
+  ctx.font = font(17, 600); const hint = 'Mouse: steer  ·  Click: side root  ·  Keys 1-5: root superpowers  ·  M: sound  ·  F: fullscreen' + (muted ? '  ·  MUTED' : '');
+  const hw = ctx.measureText(hint).width + 28; ctx.fillStyle = 'rgba(20,12,6,.5)'; ctx.beginPath(); ctx.roundRect(W / 2 - hw / 2, H - 42, hw, 32, 16); ctx.fill();
+  ctx.fillStyle = '#fff5e1'; ctx.textAlign = 'center'; ctx.fillText(hint, W / 2, H - 25);
 }
 
 
@@ -1533,6 +1666,7 @@ function frame(now) {
   if (G && state === 'end') G.reveal = Math.min(1, G.reveal + dt / 1.2);
   if (G && state === 'end' && performance.now() - endAt > 45000) toTitle(); // kiosk: idle end screen resets
   if (G) render();
+  musicTick();
   requestAnimationFrame(frame);
 }
 function init() {
@@ -1540,9 +1674,9 @@ function init() {
   document.getElementById('imgAer').src = '__AER__'; document.getElementById('imgQR').src = QRIMG.src;
   drawBoards(); buildRootButtons(); G = newGame(true);
   const testHero = QS.get('hero') || 'standard';
-  if (QS.has('ff')) { beginPlay(testHero); const n = +QS.get('ff') * 60; for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); }
-  if (QS.has('endtest')) { beginPlay(testHero); for (let i = 0; i < CFG.roundSeconds * 60 + 5 && state === 'play'; i++) update(1 / 60);
-    console.log('SCORE', heightCm(G.biomass), G.heroId, JSON.stringify({ got: G.got, fungi: G.fungi.length, lim: G.limitT.map(v => v.toFixed(1)), chewed: G.chewed, armor: G.armorUses, depth: Math.round(G.maxDepth / G.pxPerCm), sugar: G.sugar.toFixed(0), roots: G.roots.length })); }
+  if (QS.has('ff')) { startRound(testHero); const n = +QS.get('ff') * 60; for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); }
+  if (QS.has('endtest')) { startRound(testHero); for (let i = 0; i < CFG.roundSeconds * 60 + 5 && state === 'play'; i++) update(1 / 60);
+    console.log('SCORE', heightCm(G.biomass), G.heroId, JSON.stringify({ got: G.got, fungi: G.fungi.length, lim: G.limitT.map(v => v.toFixed(1)), chewed: G.chewed, armor: G.armorUses, depth: Math.round(G.maxDepth / G.pxPerCm), sugar: G.sugar.toFixed(0), lowT: (G.lowT || 0).toFixed(1), trace: G.trace, roots: G.roots.length })); }
   requestAnimationFrame(frame);
 }
 (document.fonts && document.fonts.load ? document.fonts.load(font(20, 700)) : Promise.resolve()).catch(() => {}).then(init);
