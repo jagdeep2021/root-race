@@ -13,7 +13,7 @@ Its own public repo, nested in ~/lab-code and ignored by the parent SidhuLab rep
 | `src/build.py` | inlines assets, writes `index.html` (optional extra path = offline copy) |
 | `index.html` | built, single file, what Pages serves. Never edit by hand |
 
-Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/RootRace/RootRace.html"` (then keep a numbered `RootRace_VN.html` beside it)
+Offline showcase copy: `python3 src/build.py "<OneDrive>/1_Sidhu Lab/10_Outreach_news/2026/CAFNR_Showcase/01_root_race/RootRace.html"` (then keep a numbered `RootRace_VN.html` beside it)
 
 Edit `src/game.html` only, then build. Never hand-edit the OneDrive copy: on Sep 26 edits made there (V2–V4) had to be synced back by hand.
 

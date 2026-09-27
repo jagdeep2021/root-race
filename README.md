@@ -28,7 +28,7 @@ The side panel shows a live root cross-section that changes as traits are built.
 
 Mouse to steer · click for a side root · keys 1–5 for root traits · M for sound · F for fullscreen. Arrow keys also steer.
 
-**Phones and tablets:** drag to steer, quick tap for a side root, buttons along the bottom for the traits. Scan the QR code on the title screen (print copy: `CAFNR_Showcase/RootRace/RootRace_QR.png` on OneDrive).
+**Phones and tablets:** drag to steer, quick tap for a side root, buttons along the bottom for the traits. Scan the QR code on the title screen (print copy: `CAFNR_Showcase/01_root_race/RootRace_QR.png` on OneDrive).
 
 **Kiosk mode:** when nobody is playing, the title card alternates with a silent demo round and a zoom-out of the demo's root system. Any click or key starts a game.
 
